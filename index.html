@@ -449,7 +449,7 @@
 
     <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
         <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
-        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v3.0</div>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v3.2</div>
     </footer>
 
     <!-- FAB Admin -->
@@ -527,9 +527,11 @@
                     let cloudObj = null;
                     if (this.supabase) {
                         try {
-                            const { data } = await this.supabase.from('maru_products').select('data, updated_at').eq('id', 1).maybeSingle();
-                            if (data && data.data) {
-                                cloudObj = { products: data.data, time: data.updated_at ? new Date(data.updated_at).getTime() : 0 };
+                            const { data } = await this.supabase.from('maru_products').select('data').eq('id', 1).maybeSingle();
+                            if (data && data.data && data.data._ts) {
+                                cloudObj = { products: data.data.items, time: data.data._ts };
+                            } else if (data && data.data) {
+                                cloudObj = { products: data.data, time: 0 };
                             }
                         } catch(e) { console.error('Error de nube:', e); }
                     }
@@ -539,21 +541,16 @@
                         const localTime = parseInt(localStorage.getItem('maru_last_sync') || '0');
                         
                         if (cloudObj && cloudObj.time > localTime) {
-                            // La nube es más nueva
                             this.products = cloudObj.products;
                             await this.dbSet('maru_vElite_Final_v9', cloudObj.products);
                             localStorage.setItem('maru_last_sync', cloudObj.time.toString());
                         } else if (localData && localData.length > 0) {
-                            // Lo local es más nuevo o igual
                             this.products = localData;
-                            // Intentar subir lo local a la nube por si acaso
                             await this.save();
                         } else if (cloudObj) {
-                            // No hay local, usar nube
                             this.products = cloudObj.products;
                             await this.dbSet('maru_vElite_Final_v9', cloudObj.products);
                         } else {
-                            // Fallback total
                             this.products = [
                                 { id: 101, name: 'ADIDAS GRAND COURT BASE 2.0', brand: 'Adidas', originalPrice: 250, offerPrice: 250, description: 'Clásica.', images: ['./assets/grand_court.png'], mainImage: './assets/grand_court.png', sizes: '38, 39, 40', outOfStock: false }
                             ];
@@ -563,18 +560,25 @@
                     this.isAdmin = false; // Reset session on every load/refresh for privacy
                     this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
                     
-                    // Auto-sincronización cada 60 segundos para ver cambios en otros dispositivos
+                    // Auto-sincronización cada 5 segundos para ver cambios casi en tiempo real
                     setInterval(async () => {
-                        if (this.supabase && !this.showAdmin) {
+                        if (this.supabase && !this.showAdmin && !this.isLoading) {
                             try {
-                                const { data } = await this.supabase.from('maru_products').select('data').eq('id', 1).single();
-                                if (data && data.data && JSON.stringify(data.data) !== JSON.stringify(this.products)) {
-                                    this.products = data.data;
-                                    this.notify('CATÁLOGO ACTUALIZADO');
+                                const { data } = await this.supabase.from('maru_products').select('data').eq('id', 1).maybeSingle();
+                                if (data && data.data && data.data._ts) {
+                                    const cloudTime = data.data._ts;
+                                    const localTime = parseInt(localStorage.getItem('maru_last_sync') || '0');
+                                    
+                                    if (cloudTime > localTime && JSON.stringify(data.data.items) !== JSON.stringify(this.products)) {
+                                        this.products = data.data.items;
+                                        await this.dbSet('maru_vElite_Final_v9', data.data.items);
+                                        localStorage.setItem('maru_last_sync', cloudTime.toString());
+                                        this.notify('TIENDA ACTUALIZADA');
+                                    }
                                 }
                             } catch(e) {}
                         }
-                    }, 60000);
+                    }, 5000);
                     
                     if (!window._pasteListenerAdded) {
                         window._pasteListenerAdded = true;
@@ -606,23 +610,32 @@
                     const cleanProducts = JSON.parse(JSON.stringify(this.products));
                     const now = Date.now();
                     
-                    // Guardar localmente primero
                     await this.dbSet('maru_vElite_Final_v9', cleanProducts);
                     localStorage.setItem('maru_last_sync', now.toString());
                     
-                    // Sincronizar con la Nube (Supabase)
                     if (this.supabase) {
                         try {
                             await this.supabase.from('maru_products').upsert({ 
                                 id: 1, 
-                                data: cleanProducts,
-                                updated_at: new Date(now).toISOString()
+                                data: { items: cleanProducts, _ts: now }
                             });
                         } catch(e) { console.error('Error al sincronizar con la nube'); }
                     }
                 },
                 compressImage(base64, callback) {
-                    callback(base64);
+                    const img = new Image();
+                    img.src = base64;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxW = 1200; const maxH = 1200;
+                        let w = img.width; let h = img.height;
+                        if (w > maxW) { h *= maxW / w; w = maxW; }
+                        if (h > maxH) { w *= maxH / h; h = maxH; }
+                        canvas.width = w; canvas.height = h;
+                        ctx.drawImage(img, 0, 0, w, h);
+                        callback(canvas.toDataURL('image/jpeg', 0.8));
+                    };
                 },
                 filteredProducts() { return this.products.filter(p => { const matchesSearch = (p.name || '').toLowerCase().includes(this.search.toLowerCase()); const matchesBrand = this.brandFilter === 'ALL' || (p.brand || '').toUpperCase() === this.brandFilter; return matchesSearch && matchesBrand; }); },
                 groupedProducts() {
