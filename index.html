@@ -220,7 +220,7 @@
                                     </div>
                                 </template>
                                 <div class="aspect-square p-6 relative flex items-center justify-center cursor-pointer" :class="{ 'opacity-40 grayscale': p.outOfStock }">
-                                    <img :src="p.mainImage" class="w-full h-full object-contain transform group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-1000 ease-out">
+                                    <img :src="p.mainImage" loading="lazy" class="w-full h-full object-contain transform group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-1000 ease-out">
                                 </div>
                                 <div class="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                                     <div>
@@ -449,7 +449,7 @@
 
     <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
         <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
-        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v3.2</div>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v3.3</div>
     </footer>
 
     <!-- FAB Admin -->
@@ -509,55 +509,37 @@
                     } catch(e) {}
                     window.addEventListener('scroll', () => this.scrolled = window.scrollY > 50);
                     
-                    // Inicializar Supabase con protección total
+                    // 1. CARGA INSTANTÁNEA (Memoria Local)
+                    try {
+                        const localData = await this.dbGet('maru_vElite_Final_v9');
+                        if (localData && localData.length > 0) {
+                            this.products = localData;
+                        }
+                    } catch(e) {}
+
+                    // 2. INICIALIZAR SUPABASE Y SINCRONIZAR (Nube)
                     try {
                         if (window.supabase && !this.supabaseUrl.includes('AQUÍ') && !this.supabaseKey.includes('AQUÍ')) {
                             this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
                         }
-                    } catch(e) { console.warn('Supabase no disponible, usando modo local'); }
-
-                    let cloudData = null;
-                    if (this.supabase) {
-                        try {
-                            const { data, error } = await this.supabase.from('maru_products').select('data').eq('id', 1).single();
-                            if (data && data.data) cloudData = data.data;
-                        } catch(e) { console.error('Error de nube:', e); }
-                    }
-
-                    let cloudObj = null;
-                    if (this.supabase) {
-                        try {
-                            const { data } = await this.supabase.from('maru_products').select('data').eq('id', 1).maybeSingle();
-                            if (data && data.data && data.data._ts) {
-                                cloudObj = { products: data.data.items, time: data.data._ts };
-                            } else if (data && data.data) {
-                                cloudObj = { products: data.data, time: 0 };
-                            }
-                        } catch(e) { console.error('Error de nube:', e); }
-                    }
-
-                    try {
-                        const localData = await this.dbGet('maru_vElite_Final_v9');
-                        const localTime = parseInt(localStorage.getItem('maru_last_sync') || '0');
                         
-                        if (cloudObj && cloudObj.time > localTime) {
-                            this.products = cloudObj.products;
-                            await this.dbSet('maru_vElite_Final_v9', cloudObj.products);
-                            localStorage.setItem('maru_last_sync', cloudObj.time.toString());
-                        } else if (localData && localData.length > 0) {
-                            this.products = localData;
-                            await this.save();
-                        } else if (cloudObj) {
-                            this.products = cloudObj.products;
-                            await this.dbSet('maru_vElite_Final_v9', cloudObj.products);
-                        } else {
-                            this.products = [
-                                { id: 101, name: 'ADIDAS GRAND COURT BASE 2.0', brand: 'Adidas', originalPrice: 250, offerPrice: 250, description: 'Clásica.', images: ['./assets/grand_court.png'], mainImage: './assets/grand_court.png', sizes: '38, 39, 40', outOfStock: false }
-                            ];
+                        if (this.supabase) {
+                            const { data } = await this.supabase.from('maru_products').select('data').eq('id', 1).maybeSingle();
+                            if (data && data.data) {
+                                const cloudItems = data.data._ts ? data.data.items : data.data;
+                                const cloudTime = data.data._ts || 0;
+                                const localTime = parseInt(localStorage.getItem('maru_last_sync') || '0');
+
+                                if (cloudTime > localTime || !this.products.length) {
+                                    this.products = cloudItems;
+                                    await this.dbSet('maru_vElite_Final_v9', cloudItems);
+                                    if (cloudTime) localStorage.setItem('maru_last_sync', cloudTime.toString());
+                                }
+                            }
                         }
-                    } catch(e) { console.error('Error de recuperación:', e); }
-                    
-                    this.isAdmin = false; // Reset session on every load/refresh for privacy
+                    } catch(e) { console.error('Error de sincronización:', e); }
+
+                    this.isAdmin = false;
                     this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
                     
                     // Auto-sincronización cada 5 segundos para ver cambios casi en tiempo real
