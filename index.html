@@ -152,14 +152,16 @@
                 </div>
                 <span class="text-base font-black font-display tracking-tighter uppercase">MARU <span class="text-gold-500">PULGAS</span></span>
             </div>
-            <div class="hidden md:flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.3em]">
-                <a href="#catalogo" class="hover:text-gold-500 transition-colors">Catálogo</a>
-                <a href="#ubicacion" class="hover:text-gold-500 transition-colors">Ubicación</a>
+            <div class="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.3em]">
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="#catalogo" class="hover:text-gold-500 transition-colors">Catálogo</a>
+                    <a href="#ubicacion" class="hover:text-gold-500 transition-colors">Ubicación</a>
+                </div>
                 <template x-if="isAdmin">
-                    <button @click="logout()" class="text-red-500 hover:scale-110 transition-transform ml-4"><i data-lucide="log-out"></i></button>
+                    <button @click="logout()" class="text-red-500 hover:scale-110 transition-transform ml-2"><i data-lucide="log-out" class="w-5 h-5"></i></button>
                 </template>
                 <template x-if="!isAdmin">
-                    <button @click="showLogin = true" class="hover:text-gold-500 transition-transform ml-4"><i data-lucide="user"></i></button>
+                    <button @click="showLogin = true" class="text-white hover:text-gold-500 transition-transform ml-2"><i data-lucide="user" class="w-5 h-5"></i></button>
                 </template>
             </div>
         </div>
@@ -220,16 +222,16 @@
                                 <div class="aspect-square p-6 relative flex items-center justify-center cursor-pointer" :class="{ 'opacity-40 grayscale': p.outOfStock }">
                                     <img :src="p.mainImage" class="w-full h-full object-contain transform group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-1000 ease-out">
                                 </div>
-                                <div class="p-4 flex-1 flex flex-col justify-between">
-                                    <div class="space-y-1">
-                                        <span class="text-[9px] font-black text-gold-400 uppercase tracking-widest block" x-text="p.brand"></span>
-                                        <h3 class="text-[11px] sm:text-sm font-bold text-white leading-tight uppercase tracking-wide line-clamp-2" x-text="p.name"></h3>
+                                <div class="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+                                    <div>
+                                        <span class="text-[8px] font-black text-gold-400 uppercase tracking-widest block mb-0.5" x-text="p.brand"></span>
+                                        <h3 class="text-[10px] sm:text-sm font-extrabold text-white leading-tight uppercase tracking-tight line-clamp-2 h-[2.5em]" x-text="p.name"></h3>
                                     </div>
-                                    <div class="mt-4 flex flex-col items-start gap-1">
-                                        <div class="flex items-baseline gap-2">
-                                            <span class="text-base sm:text-xl font-black text-white tracking-tighter" x-text="'S/ ' + (p.offerPrice || p.originalPrice)"></span>
+                                    <div class="mt-2 flex flex-col items-start">
+                                        <div class="flex items-baseline gap-1.5 flex-wrap">
+                                            <span class="text-sm sm:text-xl font-black text-white tracking-tighter" x-text="'S/ ' + (p.offerPrice || p.originalPrice)"></span>
                                             <template x-if="p.offerPrice && p.offerPrice < p.originalPrice">
-                                                <span class="text-white/20 text-[10px] line-through font-bold" x-text="'S/ ' + p.originalPrice"></span>
+                                                <span class="text-white/20 text-[9px] sm:text-[10px] line-through font-bold" x-text="'S/ ' + p.originalPrice"></span>
                                             </template>
                                         </div>
                                     </div>
@@ -447,7 +449,7 @@
 
     <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
         <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
-        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v2.7</div>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v2.9</div>
     </footer>
 
     <!-- FAB Admin -->
@@ -522,31 +524,41 @@
                         } catch(e) { console.error('Error de nube:', e); }
                     }
 
-                    if (cloudData) {
-                        this.products = cloudData;
-                        await this.dbSet('maru_vElite_Final_v9', cloudData);
-                    } else {
+                    let cloudObj = null;
+                    if (this.supabase) {
                         try {
-                            let savedDB = await this.dbGet('maru_vElite_Final_v9');
-                            if (savedDB && savedDB.length > 0) {
-                                this.products = savedDB;
-                                // Sincronización final de rescate
-                                await this.save();
-                            } else {
-                                // Intento de recuperación de localStorage antiguo
-                                let savedLocal = localStorage.getItem('maru_vElite_Final_v8') || localStorage.getItem('maru_vElite_Final_v5');
-                                if (savedLocal) {
-                                    this.products = JSON.parse(savedLocal);
-                                    await this.save();
-                                } else {
-                                    // Fallback absoluto con productos base si todo falla
-                                    this.products = [
-                                        { id: 101, name: 'ADIDAS GRAND COURT BASE 2.0', brand: 'Adidas', originalPrice: 250, offerPrice: 250, description: 'Clásica.', images: ['./assets/grand_court.png'], mainImage: './assets/grand_court.png', sizes: '38, 39, 40', outOfStock: false }
-                                    ];
-                                }
+                            const { data } = await this.supabase.from('maru_products').select('data, updated_at').eq('id', 1).maybeSingle();
+                            if (data && data.data) {
+                                cloudObj = { products: data.data, time: data.updated_at ? new Date(data.updated_at).getTime() : 0 };
                             }
-                        } catch(e) { console.error('Error de recuperación:', e); }
+                        } catch(e) { console.error('Error de nube:', e); }
                     }
+
+                    try {
+                        const localData = await this.dbGet('maru_vElite_Final_v9');
+                        const localTime = parseInt(localStorage.getItem('maru_last_sync') || '0');
+                        
+                        if (cloudObj && cloudObj.time > localTime) {
+                            // La nube es más nueva
+                            this.products = cloudObj.products;
+                            await this.dbSet('maru_vElite_Final_v9', cloudObj.products);
+                            localStorage.setItem('maru_last_sync', cloudObj.time.toString());
+                        } else if (localData && localData.length > 0) {
+                            // Lo local es más nuevo o igual
+                            this.products = localData;
+                            // Intentar subir lo local a la nube por si acaso
+                            await this.save();
+                        } else if (cloudObj) {
+                            // No hay local, usar nube
+                            this.products = cloudObj.products;
+                            await this.dbSet('maru_vElite_Final_v9', cloudObj.products);
+                        } else {
+                            // Fallback total
+                            this.products = [
+                                { id: 101, name: 'ADIDAS GRAND COURT BASE 2.0', brand: 'Adidas', originalPrice: 250, offerPrice: 250, description: 'Clásica.', images: ['./assets/grand_court.png'], mainImage: './assets/grand_court.png', sizes: '38, 39, 40', outOfStock: false }
+                            ];
+                        }
+                    } catch(e) { console.error('Error de recuperación:', e); }
                     
                     this.isAdmin = false; // Reset session on every load/refresh for privacy
                     this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
@@ -592,16 +604,22 @@
                 },
                 async save() {
                     const cleanProducts = JSON.parse(JSON.stringify(this.products));
+                    const now = Date.now();
+                    
+                    // Guardar localmente primero
                     await this.dbSet('maru_vElite_Final_v9', cleanProducts);
+                    localStorage.setItem('maru_last_sync', now.toString());
                     
                     // Sincronizar con la Nube (Supabase)
                     if (this.supabase) {
                         try {
-                            await this.supabase.from('maru_products').upsert({ id: 1, data: cleanProducts });
+                            await this.supabase.from('maru_products').upsert({ 
+                                id: 1, 
+                                data: cleanProducts,
+                                updated_at: new Date(now).toISOString()
+                            });
                         } catch(e) { console.error('Error al sincronizar con la nube'); }
                     }
-
-                    try { localStorage.setItem('maru_vElite_Final_v8', JSON.stringify(cleanProducts)); } catch(e) {}
                 },
                 compressImage(base64, callback) {
                     callback(base64);
