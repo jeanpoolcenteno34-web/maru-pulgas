@@ -307,7 +307,7 @@
 
                 <div class="pt-8">
                     <template x-if="!activeProduct.outOfStock">
-                        <a :href="'https://wa.me/51963084614?text=Hola Maru Pulgas, me interesa el modelo ' + activeProduct.name + (selectedSize ? ' en talla ' + selectedSize : '')" target="_blank" class="flex items-center justify-center gap-4 py-3 px-6 bg-whatsapp text-white rounded-2xl hover:scale-105 transition-all shadow-2xl shadow-whatsapp/40 w-full group">
+                        <a :href="getWhatsAppUrl(activeProduct)" target="_blank" class="flex items-center justify-center gap-4 py-3 px-6 bg-whatsapp text-white rounded-2xl hover:scale-105 transition-all shadow-2xl shadow-whatsapp/40 w-full group">
                             <i data-lucide="message-circle" class="w-5 h-5"></i> <span class="font-black text-base lg:text-lg uppercase tracking-wide">Consultar Disponibilidad</span>
                         </a>
                     </template>
@@ -445,8 +445,9 @@
         </div>
     </section>
 
-    <footer class="py-8 bg-premium-black border-t border-white/5 text-center">
+    <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
         <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v2.6</div>
     </footer>
 
     <!-- FAB Admin -->
@@ -498,7 +499,11 @@
                     setTimeout(() => { if(window.lucide) lucide.createIcons(); }, 100);
                     
                     window.scrollTo(0, 0);
-                    history.replaceState(null, null, ' ');
+                    // Limpieza total de URL para privacidad
+                    try {
+                        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                        window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+                    } catch(e) {}
                     window.addEventListener('scroll', () => this.scrolled = window.scrollY > 50);
                     
                     // Inicializar Supabase con protección total
@@ -542,7 +547,7 @@
                         } catch(e) { console.error('Error de recuperación:', e); }
                     }
                     
-                    this.isAdmin = localStorage.getItem('maru_admin_session') === 'true';
+                    this.isAdmin = false; // Reset session on every load/refresh for privacy
                     this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
                     
                     // Auto-sincronización cada 60 segundos para ver cambios en otros dispositivos
@@ -614,13 +619,14 @@
                     });
                     return Object.keys(groups).sort().map(b => ({ brand: b, products: groups[b] }));
                 },
-                login() { if (this.loginU.toLowerCase() === 'admin' && this.loginP.toLowerCase() === 'admin123') { this.isAdmin = true; this.showLogin = false; localStorage.setItem('maru_admin_session', 'true'); this.notify('SISTEMA ACTIVADO'); } else { alert('Error'); } this.$nextTick(() => lucide.createIcons()); },
-                logout() { this.isAdmin = false; localStorage.setItem('maru_admin_session', 'false'); this.notify('SESIÓN CERRADA'); this.$nextTick(() => lucide.createIcons()); },
+                login() { if (this.loginU.toLowerCase() === 'admin' && this.loginP.toLowerCase() === 'admin123') { this.isAdmin = true; this.showLogin = false; this.notify('SISTEMA ACTIVADO'); } else { alert('Error'); } this.$nextTick(() => lucide.createIcons()); },
+                logout() { this.isAdmin = false; this.notify('SESIÓN CERRADA'); this.$nextTick(() => lucide.createIcons()); },
                 notify(msg) { this.toast.message = msg; this.toast.show = true; setTimeout(() => this.toast.show = false, 3000); },
                 openDetails(p) { this.activeProduct = {...p}; this.activeIdx = 0; this.isZoomed = false; this.showDetails = true; this.selectedSize = ''; this.currentSizes = p.sizes ? p.sizes.split(',').map(s => s.trim()) : []; this.$nextTick(() => lucide.createIcons()); },
                 closeDetails() { this.showDetails = false; this.isZoomed = false; },
                 getWhatsAppUrl(p) {
-                    const text = `Hola, me interesa este modelo ${p.name.toUpperCase()} de la marca ${p.brand.toUpperCase()}.`;
+                    const sizeText = this.selectedSize ? ` en talla ${this.selectedSize}` : '';
+                    const text = `Hola, me interesa este modelo ${p.name.toUpperCase()} de la marca ${p.brand.toUpperCase()}${sizeText}.`;
                     return `https://wa.me/51963084614?text=${encodeURIComponent(text)}`;
                 },
                 nextImg() { if (this.activeIdx < this.activeProduct.images.length - 1) { this.activeIdx++; this.isZoomed = false; } },
