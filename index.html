@@ -191,7 +191,7 @@
                     <button @click="brandFilter = 'NIKE'" :class="brandFilter === 'NIKE' ? 'pill-tab-active' : 'pill-tab-inactive'" class="pill-tab">NIKE</button>
                 </div>
                 <div class="w-full lg:max-w-md relative">
-                    <input type="text" x-model="search" placeholder="Buscar modelo..." class="w-full bg-white/5 border-4 border-white/10 rounded-full px-10 py-3 text-white font-bold outline-none focus:border-gold-500 transition-all text-base">
+                    <input type="text" x-model="search" autocomplete="off" placeholder="Buscar modelo..." class="w-full bg-white/5 border-4 border-white/10 rounded-full px-10 py-3 text-white font-bold outline-none focus:border-gold-500 transition-all text-base">
                     <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5"></i>
                 </div>
             </div>
@@ -397,8 +397,8 @@
         <div class="relative w-full max-w-sm bg-premium-dark p-8 rounded-2xl border-2 border-white/10 text-center reveal shadow-2xl">
             <h2 class="text-lg font-black text-white mb-3 uppercase font-display">ACCESO ELITE</h2>
             <div class="space-y-4">
-                <input x-model="loginU" type="text" placeholder="USUARIO" class="w-full bg-white/5 border-2 border-white/20 rounded-full p-4 text-white text-center outline-none font-black uppercase text-base">
-                <input x-model="loginP" type="password" placeholder="CONTRASEÑA" class="w-full bg-white/5 border-2 border-white/20 rounded-full p-4 text-white text-center outline-none font-black uppercase text-base">
+                <input x-model="loginU" type="text" autocomplete="off" placeholder="USUARIO" class="w-full bg-white/5 border-2 border-white/20 rounded-full p-4 text-white text-center outline-none font-black uppercase text-base">
+                <input x-model="loginP" type="password" autocomplete="new-password" placeholder="CONTRASEÑA" class="w-full bg-white/5 border-2 border-white/20 rounded-full p-4 text-white text-center outline-none font-black uppercase text-base">
                 <button @click="login()" class="btn-hero-master btn-hero-gold w-full py-4 text-sm font-black">AUTENTICAR</button>
             </div>
         </div>
@@ -447,7 +447,7 @@
 
     <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
         <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
-        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v2.6</div>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v2.7</div>
     </footer>
 
     <!-- FAB Admin -->
@@ -503,6 +503,7 @@
                     try {
                         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
                         window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+                        this.search = ''; this.loginU = ''; this.loginP = '';
                     } catch(e) {}
                     window.addEventListener('scroll', () => this.scrolled = window.scrollY > 50);
                     
