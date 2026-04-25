@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maru Pulgas | Elite Sneaker Store</title>
+    
+    <!-- Librerías -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js" defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
+                        premium: { black: '#050505', dark: '#0a0a0a', gray: '#121212', border: '#1f1f1f' },
+                        whatsapp: '#25D366'
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], display: ['Outfit', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        [x-cloak] { display: none !important; }
+        
+        body { background-color: #050505; color: #ffffff; scroll-behavior: smooth; overflow-x: hidden; font-family: 'Inter', sans-serif; }
+        body.modal-open { overflow: hidden; }
+
+        @keyframes reveal { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .reveal { animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        /* BOTONES HERO - DISEÑO FORZADO */
+        .btn-hero-master {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0.75rem 1.5rem !important;
+            border-radius: 9999px !important;
+            font-weight: 900 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.3em !important;
+            transition: all 0.3s !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            min-width: 180px !important;
+            font-size: 12px !important;
+            cursor: pointer !important;
+        }
+        .btn-hero-gold {
+            background-color: #f59e0b !important;
+            color: black !important;
+            border-color: #f59e0b !important;
+            box-shadow: 0 20px 40px rgba(245, 158, 11, 0.3) !important;
+        }
+        .btn-hero-gold:hover { background-color: #fbbf24 !important; transform: translateY(-5px); }
+        
+        .btn-hero-outline {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            color: white !important;
+            border-color: rgba(255, 255, 255, 0.3) !important;
+        }
+        .btn-hero-outline:hover { background-color: rgba(255, 255, 255, 0.1) !important; border-color: white !important; transform: translateY(-5px); }
+
+        /* Catálogo y Filtros */
+        .glass-card { @apply bg-premium-dark border border-white/5 rounded-2xl transition-all duration-700 overflow-hidden flex flex-col relative; }
+        .glass-card:hover { @apply border-gold-500/40 -translate-y-4 shadow-2xl; }
+
+        .pill-tab {
+            padding: 10px 24px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            transition: all 0.3s ease;
+            border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.4);
+            cursor: pointer;
+        }
+        .pill-tab-active { 
+            background-color: #fbbf24 !important; 
+            border-color: #fbbf24 !important; 
+            color: #000000 !important; 
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.4); 
+            transform: scale(1.05); 
+        }
+        .pill-tab-inactive:hover { 
+            border-color: rgba(255,255,255,0.4); 
+            color: #ffffff; 
+        }
+
+        /* Admin - BORDES ULTRA VISIBLES */
+        .dashboard-input {
+            background-color: #0c0c0c;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            width: 100%;
+            border-radius: 14px;
+            padding: 14px 18px;
+            outline: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .dashboard-input:focus { 
+            border-color: #fbbf24; 
+            box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.1); 
+            background-color: #000000;
+        }
+        .dashboard-label { 
+            display: block; 
+            font-size: 11px; 
+            font-weight: 700; 
+            color: rgba(255, 255, 255, 0.6); 
+            text-transform: uppercase; 
+            letter-spacing: 0.1em; 
+            margin-bottom: 8px; 
+            margin-left: 4px; 
+        }
+
+        .premium-nav { backdrop-blur: 15px; background: rgba(5,5,5,0.8); }
+        .showroom-frame { background: radial-gradient(circle at center, #111 0%, #000 100%); }
+    </style>
+</head>
+<body x-data="maruStore()" x-init="init()" :class="{ 'modal-open': showDetails || showAdmin || showLogin }">
+
+    <!-- Toast -->
+    <template x-if="toast.show">
+        <div class="fixed top-10 left-1/2 -translate-x-1/2 z-[1000] reveal">
+            <div class="bg-premium-dark border border-gold-500/40 text-white px-10 py-5 rounded-full shadow-2xl flex items-center gap-4">
+                <span class="text-[11px] font-black tracking-widest uppercase" x-text="toast.message"></span>
+            </div>
+        </div>
+    </template>
+
+    <!-- Barra de Navegación -->
+    <nav class="premium-nav fixed top-0 w-full z-[100]">
+        <div class="max-w-7xl mx-auto px-8 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-4 group cursor-pointer" @click="window.scrollTo(0,0)">
+                <div class="w-5 h-5 bg-gold-500 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform">
+                    <i data-lucide="zap" class="text-black w-5 h-5"></i>
+                </div>
+                <span class="text-base font-black font-display tracking-tighter uppercase">MARU <span class="text-gold-500">PULGAS</span></span>
+            </div>
+            <div class="hidden md:flex items-center gap-4 text-[11px] font-black uppercase tracking-[0.3em]">
+                <a href="#catalogo" class="hover:text-gold-500 transition-colors">Catálogo</a>
+                <a href="#ubicacion" class="hover:text-gold-500 transition-colors">Ubicación</a>
+                <template x-if="isAdmin">
+                    <button @click="logout()" class="text-red-500 hover:scale-110 transition-transform ml-4"><i data-lucide="log-out"></i></button>
+                </template>
+                <template x-if="!isAdmin">
+                    <button @click="showLogin = true" class="hover:text-gold-500 transition-transform ml-4"><i data-lucide="user"></i></button>
+                </template>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative flex items-center justify-center px-6 overflow-hidden bg-premium-black pt-36 pb-12">
+        <div class="max-w-6xl mx-auto text-center relative z-10 reveal">
+            <span class="inline-block px-6 py-2 bg-gold-500/20 border border-gold-500/50 text-gold-500 text-xs font-black tracking-[0.4em] uppercase mb-6 rounded-full shadow-[0_0_20px_rgba(251,191,36,0.3)] backdrop-blur-md">SNEAKER ELITE EDITION</span>
+            <h1 class="text-5xl md:text-7xl font-black font-display leading-[0.8] mb-3 uppercase tracking-tighter text-white">
+                COLECCIÓN<br><span class="text-gold-500">LEGENDARIA</span>
+            </h1>
+            <p class="text-white/40 text-base md:text-lg font-medium max-w-2xl mx-auto mb-3 leading-relaxed">Descubre la selección más exclusiva de sneakers originales en Lima.</p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="#catalogo" class="btn-hero-master btn-hero-gold">Explorar Tienda</a>
+                <a href="#ubicacion" class="btn-hero-master btn-hero-outline">Nuestra Ubicación</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Catálogo -->
+    <section id="catalogo" class="max-w-7xl mx-auto px-8 py-16">
+        <div class="flex flex-col gap-6 mb-10 reveal text-center lg:text-left">
+            <h2 class="text-4xl md:text-5xl font-black font-display tracking-tighter uppercase leading-none">EL CATÁLOGO</h2>
+            <div class="flex flex-col lg:flex-row justify-between items-center gap-6">
+                <div class="flex flex-wrap gap-3">
+                    <button @click="brandFilter = 'ALL'" :class="brandFilter === 'ALL' ? 'pill-tab-active' : 'pill-tab-inactive'" class="pill-tab">TODOS</button>
+                    <button @click="brandFilter = 'ADIDAS'" :class="brandFilter === 'ADIDAS' ? 'pill-tab-active' : 'pill-tab-inactive'" class="pill-tab">ADIDAS</button>
+                    <button @click="brandFilter = 'NIKE'" :class="brandFilter === 'NIKE' ? 'pill-tab-active' : 'pill-tab-inactive'" class="pill-tab">NIKE</button>
+                </div>
+                <div class="w-full lg:max-w-md relative">
+                    <input type="text" x-model="search" placeholder="Buscar modelo..." class="w-full bg-white/5 border-4 border-white/10 rounded-full px-10 py-3 text-white font-bold outline-none focus:border-gold-500 transition-all text-base">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-16">
+            <template x-for="group in groupedProducts()" :key="group.brand">
+                <div x-show="group.products.length > 0">
+                    <div class="flex items-center gap-6 mb-8">
+                        <h3 class="text-3xl font-black text-white uppercase tracking-widest" x-text="group.brand"></h3>
+                        <div class="h-[2px] flex-1 bg-gradient-to-r from-white/20 to-transparent"></div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        <template x-for="(p, index) in group.products" :key="p.id">
+                            <div class="glass-card group reveal" @click="openDetails(p)">
+                                <div class="absolute top-4 left-4 z-10 flex flex-col gap-3">
+                                    <template x-if="p.outOfStock"><span class="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase shadow-2xl">AGOTADO</span></template>
+                                    <template x-if="p.offerPrice < p.originalPrice && !p.outOfStock"><span class="bg-gold-500 text-black text-[9px] font-black px-3 py-1 rounded-full uppercase shadow-2xl">OFERTA</span></template>
+                                </div>
+                                <template x-if="isAdmin">
+                                    <div class="absolute top-4 right-4 z-20 flex gap-2">
+                                        <button @click.stop="editProduct(p)" class="p-2 bg-gold-500 text-black backdrop-blur-md rounded-xl hover:scale-110 transition-transform shadow-xl"><i data-lucide="edit-3" class="w-5 h-5"></i></button>
+                                        <button @click.stop="deleteProduct(p.id)" class="p-2 bg-red-600 text-white backdrop-blur-md rounded-xl hover:scale-110 transition-transform shadow-xl"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                                    </div>
+                                </template>
+                                <div class="aspect-square p-6 relative flex items-center justify-center cursor-pointer" :class="{ 'opacity-40 grayscale': p.outOfStock }">
+                                    <img :src="p.mainImage" class="w-full h-full object-contain transform group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-1000 ease-out">
+                                </div>
+                                <div class="p-4 flex-1 flex flex-col">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <span class="text-[9px] font-black text-gold-400 uppercase tracking-widest" x-text="p.brand"></span>
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-lg font-black text-white tracking-tighter" x-text="'S/ ' + (p.offerPrice || p.originalPrice)"></span>
+                                            <template x-if="p.offerPrice && p.offerPrice < p.originalPrice"><span class="text-white/20 text-[11px] line-through font-bold" x-text="'S/ ' + p.originalPrice"></span></template>
+                                        </div>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-white leading-snug uppercase tracking-wide line-clamp-2 mt-1" x-text="p.name"></h3>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </section>
+
+    <!-- Modal Detalle REFINADO (Reducción de espacio y equilibrio) -->
+    <div x-show="showDetails" x-cloak class="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div @click="closeDetails()" class="fixed inset-0 bg-black/98 backdrop-blur-3xl transition-opacity duration-500"></div>
+        <div class="relative w-full max-w-5xl bg-premium-dark rounded-3xl shadow-2xl flex flex-col lg:flex-row max-h-[95vh] lg:overflow-hidden overflow-y-auto border border-white/5 reveal">
+            <button @click="closeDetails()" class="absolute top-3 right-3 lg:top-5 lg:right-5 z-[210] p-2 bg-black/80 border border-white/20 text-white rounded-full hover:bg-gold-500 hover:text-black transition-all shadow-2xl backdrop-blur-md"><i data-lucide="x" class="w-6 h-6"></i></button>
+            
+            <div class="w-full lg:w-3/5 min-h-[380px] lg:h-full bg-premium-black relative border-b lg:border-b-0 lg:border-r border-white/5 flex flex-col shrink-0 lg:min-h-0">
+                <div class="showroom-frame flex-1 relative flex flex-col overflow-hidden">
+                    <template x-if="activeProduct.images.length > 1 && activeIdx > 0">
+                        <button @click.stop="prevImg()" class="absolute left-4 lg:left-8 top-[calc(50%-40px)] lg:top-1/2 -translate-y-1/2 z-[50] p-3 lg:p-0 bg-black/40 lg:bg-transparent border border-white/10 lg:border-none text-gold-500 rounded-2xl lg:rounded-none hover:bg-gold-500 lg:hover:bg-transparent hover:text-black lg:hover:text-gold-400 hover:border-gold-500 lg:hover:border-transparent transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)] lg:shadow-none backdrop-blur-md lg:backdrop-blur-none hover:scale-110 lg:hover:scale-125">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 lg:w-12 lg:h-12 drop-shadow-md lg:drop-shadow-[0_4px_10px_rgba(0,0,0,1)]"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                        </button>
+                    </template>
+                    
+                    <div class="zoom-container flex-1 w-full relative flex items-center justify-center p-6 pb-20 lg:pt-10 lg:pb-24 lg:px-10" @mousemove="handleZoom($event)" @click="isZoomed = !isZoomed">
+                        <img :src="activeProduct.images[activeIdx]" :class="{ 'scale-[2.5] cursor-zoom-out': isZoomed }" :style="isZoomed ? `transform-origin: ${zoomPos}` : 'transform-origin: center'" class="w-full h-full object-contain transition-transform duration-500 ease-out drop-shadow-2xl relative z-10">
+                    </div>
+                    
+                    <template x-if="activeProduct.images.length > 1 && activeIdx < activeProduct.images.length - 1">
+                        <button @click.stop="nextImg()" class="absolute right-4 lg:right-8 top-[calc(50%-40px)] lg:top-1/2 -translate-y-1/2 z-[50] p-3 lg:p-0 bg-black/40 lg:bg-transparent border border-white/10 lg:border-none text-gold-500 rounded-2xl lg:rounded-none hover:bg-gold-500 lg:hover:bg-transparent hover:text-black lg:hover:text-gold-400 hover:border-gold-500 lg:hover:border-transparent transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)] lg:shadow-none backdrop-blur-md lg:backdrop-blur-none hover:scale-110 lg:hover:scale-125">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7 lg:w-12 lg:h-12 drop-shadow-md lg:drop-shadow-[0_4px_10px_rgba(0,0,0,1)]"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </button>
+                    </template>
+                    
+                    <template x-if="activeProduct.images.length > 1">
+                        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-2.5 bg-black/80 border border-white/10 backdrop-blur-md rounded-full shadow-xl pointer-events-auto z-[40]">
+                            <template x-for="(img, idx) in activeProduct.images" :key="idx"><div class="h-1.5 rounded-full transition-all duration-500 cursor-pointer" @click.stop="activeIdx = idx; isZoomed = false;" :class="activeIdx === idx ? 'w-6 bg-gold-500 shadow-[0_0_10px_rgba(251,191,36,0.6)]' : 'w-2 bg-white/30'"></div></template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Columna de información equilibrada -->
+            <div class="w-full lg:w-2/5 p-4 lg:p-8 lg:overflow-y-auto flex flex-col justify-between">
+                <div class="space-y-6">
+                    <div class="space-y-3">
+                        <span class="text-gold-500 font-black text-sm uppercase tracking-widest block leading-none" x-text="activeProduct.brand"></span>
+                        <h2 class="text-2xl lg:text-4xl font-black font-display text-white tracking-wide uppercase leading-tight" x-text="activeProduct.name"></h2>
+                        <template x-if="activeProduct.outOfStock">
+                            <span class="inline-block px-10 py-3 bg-red-600/10 border border-red-600/30 text-red-500 text-[11px] font-black rounded-full uppercase tracking-widest shadow-xl">Ejemplar agotado</span>
+                        </template>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4 class="text-white font-black text-base lg:text-2xl uppercase flex items-center gap-6"><span class="w-3 h-3 rounded-full bg-gold-500"></span> Tallas disponibles</h4>
+                        <div class="flex flex-wrap gap-4">
+                            <template x-for="size in currentSizes" :key="size">
+                                <button @click="selectedSize === size ? selectedSize = '' : selectedSize = size" :class="selectedSize === size ? 'bg-gold-500 border-gold-500 text-black shadow-2xl scale-110' : 'bg-white/5 border-white/20 text-white'" class="px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all" x-text="size"></button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h4 class="text-white font-black text-base lg:text-2xl uppercase flex items-center gap-6"><span class="w-3 h-3 rounded-full bg-gold-500"></span> Reseña del Calzado</h4>
+                        <p class="text-white/70 text-base leading-relaxed font-medium" x-text="activeProduct.description || 'Sin descripción detallada.'"></p>
+                    </div>
+
+                    <div class="flex items-center gap-4 mt-2">
+                        <span class="text-3xl lg:text-4xl font-black text-white tracking-wide" x-text="'S/ ' + (activeProduct.offerPrice || activeProduct.originalPrice)"></span>
+                        <template x-if="activeProduct.offerPrice && activeProduct.offerPrice < activeProduct.originalPrice"><span class="text-white/40 text-xl lg:text-2xl line-through font-bold mt-2" x-text="'S/ ' + activeProduct.originalPrice"></span></template>
+                    </div>
+                </div>
+
+                <div class="pt-8">
+                    <template x-if="!activeProduct.outOfStock">
+                        <a :href="'https://wa.me/51963084614?text=Hola Maru Pulgas, me interesa el modelo ' + activeProduct.name + (selectedSize ? ' en talla ' + selectedSize : '')" target="_blank" class="flex items-center justify-center gap-4 py-3 px-6 bg-whatsapp text-white rounded-2xl hover:scale-105 transition-all shadow-2xl shadow-whatsapp/40 w-full group">
+                            <i data-lucide="message-circle" class="w-5 h-5"></i> <span class="font-black text-base lg:text-lg uppercase tracking-wide">Consultar Disponibilidad</span>
+                        </a>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div x-show="showAdmin" x-cloak class="fixed inset-0 z-[300] flex items-center justify-center p-4">
+        <div @click="showAdmin = false" class="fixed inset-0 bg-black/98 backdrop-blur-3xl transition-opacity duration-500"></div>
+        <div class="relative w-full max-w-5xl bg-premium-dark rounded-2xl shadow-2xl border-2 border-white/10 max-h-[90vh] overflow-hidden flex flex-col reveal">
+            <div class="flex justify-between items-center px-6 py-4 border-b-2 border-white/10 bg-white/[0.02]">
+                <div class="flex items-center gap-4"><div class="w-8 h-8 bg-whatsapp/10 rounded-2xl flex items-center justify-center text-whatsapp shadow-2xl"><i data-lucide="settings" class="w-5 h-5"></i></div><h2 class="text-lg font-black text-white uppercase tracking-tighter" x-text="isEditing ? 'Editor de Producto' : 'Nueva Pieza'"></h2></div>
+                <button @click="showAdmin = false" class="p-3 bg-white/5 rounded-full text-white/40 hover:text-white transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 lg:p-6">
+                <form @submit.prevent="saveProduct()" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-6">
+                            <div><label class="dashboard-label">Modelo del Calzado</label><input x-model="form.name" required type="text" class="dashboard-input" placeholder="Nombre completo"></div>
+                            <div><label class="dashboard-label">Marca</label><input x-model="form.brand" required type="text" class="dashboard-input" placeholder="Ej: Adidas"></div>
+                        </div>
+                        <div class="space-y-6">
+                            <div><label class="dashboard-label">Precio Regular (S/)</label><input x-model="form.originalPrice" required type="number" step="any" class="dashboard-input" placeholder="0.00"></div>
+                            <div><label class="dashboard-label">Precio Oferta (S/)</label><input x-model="form.offerPrice" type="number" step="any" class="dashboard-input" placeholder="0.00"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div><label class="dashboard-label">Tallas Disponibles</label><input x-model="form.sizes" type="text" class="dashboard-input" placeholder="38, 39, 40..."></div>
+                        <div><label class="dashboard-label">Descripción Detallada</label><textarea x-model="form.description" class="dashboard-input h-32 resize-none"></textarea></div>
+                    </div>
+                    <div class="space-y-6">
+                        <h4 class="text-xs font-black text-white/40 uppercase flex items-center gap-5">Galería Multimedia</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
+                            <template x-for="(img, idx) in form.images" :key="idx">
+                                <div class="relative aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl" :class="form.mainImage === img ? 'ring-2 ring-whatsapp' : ''">
+                                    <img :src="img" class="w-full h-full object-cover">
+                                    <div class="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex items-center justify-center gap-4 transition-opacity">
+                                        <button type="button" @click="form.images.splice(idx,1)" class="p-3 bg-red-600 text-white rounded-full hover:scale-110 transition-transform"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                                        <button type="button" @click="form.mainImage = img" class="p-3 rounded-full hover:scale-110 transition-transform" :class="form.mainImage === img ? 'bg-whatsapp text-black' : 'bg-white/20'"><i data-lucide="check" class="w-5 h-5"></i></button>
+                                    </div>
+                                </div>
+                            </template>
+                            <div class="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-white/20 bg-white/5 cursor-pointer hover:bg-white/10 hover:border-white/30 transition-all" @click="notify('Pega con Ctrl+V')"><i data-lucide="image-plus" class="w-8 h-8 mb-2"></i><span class="text-[10px] font-bold uppercase tracking-wider">Pegar Imagen</span></div>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-4 bg-whatsapp text-black text-sm font-black rounded-full shadow-2xl uppercase">GUARDAR CAMBIOS</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login -->
+    <div x-show="showLogin" x-cloak class="fixed inset-0 z-[500] flex items-center justify-center p-4">
+        <div @click="showLogin = false" class="fixed inset-0 bg-black/98 backdrop-blur-3xl transition-opacity duration-500"></div>
+        <div class="relative w-full max-w-sm bg-premium-dark p-8 rounded-2xl border-2 border-white/10 text-center reveal shadow-2xl">
+            <h2 class="text-lg font-black text-white mb-3 uppercase font-display">ACCESO ELITE</h2>
+            <div class="space-y-4">
+                <input x-model="loginU" type="text" placeholder="USUARIO" class="w-full bg-white/5 border-2 border-white/20 rounded-full p-4 text-white text-center outline-none font-black uppercase text-base">
+                <input x-model="loginP" type="password" placeholder="CONTRASEÑA" class="w-full bg-white/5 border-2 border-white/20 rounded-full p-4 text-white text-center outline-none font-black uppercase text-base">
+                <button @click="login()" class="btn-hero-master btn-hero-gold w-full py-4 text-sm font-black">AUTENTICAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ubicación -->
+    <section id="ubicacion" class="py-12 lg:py-16 bg-premium-dark relative overflow-hidden border-t border-white/5">
+        <div class="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center reveal">
+                <div class="space-y-8">
+                    <div class="space-y-2">
+                        <h2 class="text-4xl lg:text-5xl font-black font-display tracking-tighter uppercase leading-[0.85]">MARU PULGAS</h2>
+                        <p class="text-gold-500 font-bold text-base lg:text-lg tracking-tighter uppercase italic">Nuestro Showroom en La Molina</p>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="flex gap-4 items-center group">
+                            <div class="p-4 bg-white/5 rounded-full text-gold-500 border-2 border-white/10 group-hover:scale-110 transition-transform shadow-xl"><i data-lucide="map-pin" class="w-6 h-6"></i></div>
+                            <div class="space-y-1">
+                                <h4 class="text-white font-bold text-sm tracking-widest uppercase text-white/50">Visítanos</h4>
+                                <p class="text-white text-lg lg:text-xl font-medium leading-tight">El búnker Del, La Molina 15026<br>Lima - Perú</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 items-center group">
+                            <div class="p-4 bg-white/5 rounded-full text-gold-500 border-2 border-white/10 group-hover:scale-110 transition-transform shadow-xl"><i data-lucide="phone" class="w-6 h-6"></i></div>
+                            <div class="space-y-1">
+                                <h4 class="text-white font-bold text-sm tracking-widest uppercase text-white/50">Llámanos</h4>
+                                <p class="text-white text-xl lg:text-2xl font-black tracking-tighter">+51 963 084 614</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <a href="https://www.google.com/maps/search/?api=1&query=-12.0851224,-76.8857306" target="_blank" class="btn-hero-master btn-hero-gold inline-flex items-center gap-3 py-3 px-12 text-lg lg:text-xl font-bold shadow-xl">
+                            <i data-lucide="navigation" class="w-5 h-5"></i> CÓMO LLEGAR
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="aspect-square w-full max-w-md mx-auto lg:max-w-full bg-premium-black rounded-3xl overflow-hidden border-4 border-white/5 shadow-2xl relative">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3901.3703!2d-76.8857306!3d-12.0851224!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9105c154cabaa87b%3A0xd32d621d8c650e3e!2sMaru%20pulgas!5e0!3m2!1ses!2spe!4v1713912345678!5m2!1ses!2spe" width="100%" height="100%" style="border:0; filter: invert(90%) hue-rotate(180deg) brightness(95%) contrast(90%);" allowfullscreen="" loading="lazy"></iframe>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-8 bg-premium-black border-t border-white/5 text-center">
+        <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
+    </footer>
+
+    <!-- FAB Admin -->
+    <button x-show="isAdmin" @click="openNew()" class="fixed bottom-14 right-14 z-[300] w-16 h-16 bg-gold-500 text-black rounded-full shadow-[0_30px_70px_rgba(245,158,11,0.4)] flex items-center justify-center active:scale-90 transition-all hover:bg-gold-400 hover:-translate-y-6"><i data-lucide="plus" class="w-8 h-8 text-black"></i></button>
+
+    <script>
+        function maruStore() {
+            return {
+                products: [], search: '', brandFilter: 'ALL', scrolled: false, isAdmin: false, showLogin: false, showAdmin: false, showDetails: false, isEditing: false, isZoomed: false, activeProduct: {images:[]}, activeIdx: 0, zoomPos: 'center', toast: { show: false, message: '' },
+                form: { id: null, name: '', brand: '', originalPrice: '', offerPrice: '', description: '', images: [], mainImage: '', sizes: '', outOfStock: false },
+                loginU: '', loginP: '', currentSizes: [], selectedSize: '',
+                
+                // --- CONFIGURACIÓN SUPABASE ---
+                supabaseUrl: 'https://yofnsgvdgecpbudilfgp.supabase.co',
+                supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZm5zZ3ZkZ2VjcGJ1ZGlsZmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwODYxNDksImV4cCI6MjA5MjY2MjE0OX0.upyTUPCOp4-81aEazkxBhrzRfHJjsVD_uT3n5qVsSoE',
+                supabase: null,
+                // ------------------------------
+                
+                initDB() {
+                    return new Promise((resolve, reject) => {
+                        const request = indexedDB.open('MaruPulgasDB', 1);
+                        request.onupgradeneeded = (e) => e.target.result.createObjectStore('store');
+                        request.onsuccess = (e) => resolve(e.target.result);
+                        request.onerror = (e) => reject(e);
+                    });
+                },
+                async dbGet(key) {
+                    try {
+                        const db = await this.initDB();
+                        return new Promise((resolve) => {
+                            const req = db.transaction('store', 'readonly').objectStore('store').get(key);
+                            req.onsuccess = () => resolve(req.result);
+                            req.onerror = () => resolve(null);
+                        });
+                    } catch(e) { return null; }
+                },
+                async dbSet(key, value) {
+                    try {
+                        const db = await this.initDB();
+                        return new Promise((resolve) => {
+                            const req = db.transaction('store', 'readwrite').objectStore('store').put(value, key);
+                            req.onsuccess = () => resolve(true);
+                            req.onerror = () => resolve(false);
+                        });
+                    } catch(e) { return false; }
+                },
+
+                async init() {
+                    window.scrollTo(0, 0);
+                    history.replaceState(null, null, ' ');
+                    window.addEventListener('scroll', () => this.scrolled = window.scrollY > 50);
+                    
+                    // Inicializar Supabase si las llaves existen
+                    if (!this.supabaseUrl.includes('AQUÍ') && !this.supabaseKey.includes('AQUÍ')) {
+                        this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
+                    }
+
+                    let cloudData = null;
+                    if (this.supabase) {
+                        try {
+                            const { data, error } = await this.supabase.from('maru_products').select('data').eq('id', 1).single();
+                            if (data && data.data) cloudData = data.data;
+                        } catch(e) { console.error('Error al conectar con la nube'); }
+                    }
+
+                    if (cloudData) {
+                        this.products = cloudData;
+                        await this.dbSet('maru_vElite_Final_v9', cloudData); // Cache local
+                    } else {
+                        let savedDB = await this.dbGet('maru_vElite_Final_v9');
+                        if (savedDB) {
+                            this.products = savedDB;
+                        } else {
+                        // Migration from localStorage to IndexedDB
+                        let savedLocal = localStorage.getItem('maru_vElite_Final_v8') || localStorage.getItem('maru_vElite_Final_v5');
+                        if (savedLocal) {
+                            this.products = JSON.parse(savedLocal);
+                            // Append only the 3 new products
+                            if (!this.products.some(p => p.id === 106)) {
+                                this.products.push(
+                                    { id: 106, name: 'ADIDAS VL COURT 3.0', brand: 'Adidas', originalPrice: 259, offerPrice: 259, description: 'Zapatilla urbana de estilo clásico inspirada en el skate. Su parte superior de gamuza resistente y suave la hace ideal para combinar con tu look diario.', characteristics: 'Exterior de gamuza premium • Suela tipo cupsole de caucho resistente • Forro textil para mayor comodidad • Diseño clásico con las tres tiras', images: ['./assets/vl_court_green.png', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/2d9f4851221b4a0ab6efafc100c8f5d0_9366/Zapatillas_VL_Court_3.0_Verde_ID6285_01_standard.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/4f9e1e19eb0b4b2c9df7afc100c8e310_9366/Zapatillas_VL_Court_3.0_Verde_ID6285_02_standard_hover.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/d40d99516cb245cbb5beafc100c8e860_9366/Zapatillas_VL_Court_3.0_Verde_ID6285_03_standard.jpg'], mainImage: './assets/vl_court_green.png', sizes: '38, 39, 40, 41', outOfStock: false },
+                                    { id: 107, name: 'ADIDAS ADVANTAGE', brand: 'Adidas', originalPrice: 229, offerPrice: 229, description: 'Estilo tenístico de perfil bajo y estética minimalista. Una opción elegante y limpia perfecta para un estilo casual relajado durante todo el día.', characteristics: 'Exterior de piel sintética lisa • Plantilla Cloudfoam para amortiguación cómoda • Detalles perforados discretos • Suela de caucho vulcanizado', images: ['./assets/advantage_purple.png', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/7c5e53bf9ba64e43ab72af62010c7333_9366/Zapatillas_Advantage_Base_Morado_GW9214_01_standard.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/2bcffb3a164c48979140af62010c7ef0_9366/Zapatillas_Advantage_Base_Morado_GW9214_02_standard_hover.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/01f11c52b04746f39331af62010c85c2_9366/Zapatillas_Advantage_Base_Morado_GW9214_03_standard.jpg'], mainImage: './assets/advantage_purple.png', sizes: '36, 37, 38, 39', outOfStock: false },
+                                    { id: 108, name: 'ADIDAS LITE RACER 3.0', brand: 'Adidas', originalPrice: 199, offerPrice: 199, description: 'Un modelo ultra ligero inspirado en el calzado de running. Ofrece máxima comodidad gracias a su amortiguación Cloudfoam y es perfecto para días activos.', characteristics: 'Exterior de malla deportiva transpirable • Mediasuela y plantilla Cloudfoam • Extremadamente ligeras • Suela resistente para uso diario', images: ['./assets/lite_racer_black.png', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/6a761e05a8b74681a257ae2a00c6d9bc_9366/Zapatillas_Lite_Racer_3.0_Negro_GW7954_01_standard.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/4bcddce13dfb4e54911dae2a00c6eb2d_9366/Zapatillas_Lite_Racer_3.0_Negro_GW7954_02_standard_hover.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/7dcddc1e7a4641edb391ae2a00c6e1d3_9366/Zapatillas_Lite_Racer_3.0_Negro_GW7954_03_standard.jpg'], mainImage: './assets/lite_racer_black.png', sizes: '36, 37, 38, 39', outOfStock: false }
+                                );
+                            }
+                        } else {
+                            // Absolute fallback
+                            this.products = [
+                                { id: 101, name: 'ADIDAS GRAND COURT BASE 2.0', brand: 'Adidas', originalPrice: 250, offerPrice: 250, description: 'Zapatilla clásica de estilo casual con las icónicas tres tiras. Diseño atemporal inspirado en el tenis de los años 70.', characteristics: 'Exterior de piel sintética suave • Amortiguación ligera de EVA', images: ['./assets/grand_court.png'], mainImage: './assets/grand_court.png', sizes: '38, 39, 40', outOfStock: false },
+                                { id: 102, name: 'ADIDAS GAMECHASER', brand: 'Adidas', originalPrice: 240, offerPrice: 240, description: 'Calzado diseñado para brindar comodidad y rendimiento. Silueta moderna con detalles metálicos, ideal para dentro y fuera de la cancha.', characteristics: 'Exterior combinado de malla y material sintético', images: ['./assets/gamechaser.png'], mainImage: './assets/gamechaser.png', sizes: '40, 41, 42, 43', outOfStock: false },
+                                { id: 103, name: 'ADIDAS STREETCHECK', brand: 'Adidas', originalPrice: 280, offerPrice: 280, description: 'Lleva el legado del baloncesto a las calles con estas zapatillas inspiradas en las emblemáticas Superstar.', characteristics: 'Exterior de piel con la clásica puntera de goma', images: ['./assets/streetcheck.png'], mainImage: './assets/streetcheck.png', sizes: '36, 37, 38', outOfStock: false },
+                                { id: 104, name: 'ADIDAS CAMPUS 00S', brand: 'Adidas', originalPrice: 430, offerPrice: 430, description: 'La mítica Campus se reinventa inspirándose en el estilo skater de los años 2000.', characteristics: 'Exterior de gamuza suave de alta calidad', images: ['./assets/campus_yellow.png'], mainImage: './assets/campus_yellow.png', sizes: '38, 39, 40', outOfStock: false },
+                                { id: 105, name: 'ADIDAS HANDBALL SPEZIAL', brand: 'Adidas', originalPrice: 400, offerPrice: 400, description: 'Revive el estilo vintage de los 70 con esta zapatilla de balonmano convertida en icono de la moda urbana.', characteristics: 'Exterior de ante de primera calidad', images: ['./assets/spezial_blue.png'], mainImage: './assets/spezial_blue.png', sizes: '40, 41', outOfStock: false },
+                                { id: 106, name: 'ADIDAS VL COURT 3.0', brand: 'Adidas', originalPrice: 259, offerPrice: 259, description: 'Zapatilla urbana de estilo clásico inspirada en el skate.', characteristics: 'Exterior de gamuza premium', images: ['./assets/vl_court_green.png'], mainImage: './assets/vl_court_green.png', sizes: '38, 39, 40, 41', outOfStock: false },
+                                { id: 107, name: 'ADIDAS ADVANTAGE', brand: 'Adidas', originalPrice: 229, offerPrice: 229, description: 'Estilo tenístico de perfil bajo y estética minimalista.', characteristics: 'Exterior de piel sintética lisa', images: ['./assets/advantage_purple.png'], mainImage: './assets/advantage_purple.png', sizes: '36, 37, 38', outOfStock: false },
+                                { id: 108, name: 'ADIDAS LITE RACER 3.0', brand: 'Adidas', originalPrice: 199, offerPrice: 199, description: 'Un modelo ultra ligero inspirado en el calzado de running.', characteristics: 'Exterior de malla deportiva transpirable', images: ['./assets/lite_racer_black.png'], mainImage: './assets/lite_racer_black.png', sizes: '36, 37, 38', outOfStock: false }
+                            ];
+                        }
+                        await this.save();
+                    }
+                    this.isAdmin = localStorage.getItem('maru_admin_session') === 'true';
+                    this.$nextTick(() => lucide.createIcons());
+                    
+                    if (!window._pasteListenerAdded) {
+                        window._pasteListenerAdded = true;
+                        let isPasting = false;
+                        window.addEventListener('paste', (e) => {
+                            if (this.showAdmin && !isPasting) {
+                                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                                for (let i = 0; i < items.length; i++) {
+                                    if (items[i].kind === 'file') {
+                                        isPasting = true;
+                                        const reader = new FileReader();
+                                        reader.onload = (ev) => {
+                                            this.compressImage(ev.target.result, (compressedUrl) => {
+                                                this.form.images.push(compressedUrl);
+                                                if (!this.form.mainImage) this.form.mainImage = compressedUrl;
+                                                this.notify('Imagen añadida (Calidad Máxima)');
+                                                setTimeout(() => isPasting = false, 500);
+                                            });
+                                        };
+                                        reader.readAsDataURL(items[i].getAsFile());
+                                        break;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                },
+                async save() {
+                    const cleanProducts = JSON.parse(JSON.stringify(this.products));
+                    await this.dbSet('maru_vElite_Final_v9', cleanProducts);
+                    
+                    // Sincronizar con la Nube (Supabase)
+                    if (this.supabase) {
+                        try {
+                            await this.supabase.from('maru_products').upsert({ id: 1, data: cleanProducts });
+                        } catch(e) { console.error('Error al sincronizar con la nube'); }
+                    }
+
+                    try { localStorage.setItem('maru_vElite_Final_v8', JSON.stringify(cleanProducts)); } catch(e) {}
+                },
+                compressImage(base64, callback) {
+                    callback(base64);
+                },
+                filteredProducts() { return this.products.filter(p => { const matchesSearch = (p.name || '').toLowerCase().includes(this.search.toLowerCase()); const matchesBrand = this.brandFilter === 'ALL' || (p.brand || '').toUpperCase() === this.brandFilter; return matchesSearch && matchesBrand; }); },
+                groupedProducts() {
+                    const filtered = this.filteredProducts();
+                    if (this.brandFilter !== 'ALL') {
+                        return [{ brand: this.brandFilter, products: filtered }];
+                    }
+                    const groups = {};
+                    filtered.forEach(p => {
+                        const b = (p.brand || 'Otras').toUpperCase();
+                        if (!groups[b]) groups[b] = [];
+                        groups[b].push(p);
+                    });
+                    return Object.keys(groups).sort().map(b => ({ brand: b, products: groups[b] }));
+                },
+                login() { if (this.loginU.toLowerCase() === 'admin' && this.loginP.toLowerCase() === 'admin123') { this.isAdmin = true; this.showLogin = false; localStorage.setItem('maru_admin_session', 'true'); this.notify('SISTEMA ACTIVADO'); } else { alert('Error'); } this.$nextTick(() => lucide.createIcons()); },
+                logout() { this.isAdmin = false; localStorage.setItem('maru_admin_session', 'false'); this.notify('SESIÓN CERRADA'); this.$nextTick(() => lucide.createIcons()); },
+                notify(msg) { this.toast.message = msg; this.toast.show = true; setTimeout(() => this.toast.show = false, 3000); },
+                openDetails(p) { this.activeProduct = {...p}; this.activeIdx = 0; this.isZoomed = false; this.showDetails = true; this.selectedSize = ''; this.currentSizes = p.sizes ? p.sizes.split(',').map(s => s.trim()) : []; this.$nextTick(() => lucide.createIcons()); },
+                closeDetails() { this.showDetails = false; this.isZoomed = false; },
+                nextImg() { if (this.activeIdx < this.activeProduct.images.length - 1) { this.activeIdx++; this.isZoomed = false; } },
+                prevImg() { if (this.activeIdx > 0) { this.activeIdx--; this.isZoomed = false; } },
+                handleZoom(e) { if (this.isZoomed) { const rect = e.currentTarget.getBoundingClientRect(); this.zoomPos = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`; } },
+                openNew() { this.isEditing = false; this.form = { id: null, name: '', brand: '', originalPrice: '', offerPrice: '', description: '', images: [], mainImage: '', sizes: '', outOfStock: false }; this.showAdmin = true; this.$nextTick(() => lucide.createIcons()); },
+                editProduct(p) { this.isEditing = true; this.form = JSON.parse(JSON.stringify(p)); this.showAdmin = true; this.$nextTick(() => lucide.createIcons()); },
+                async saveProduct() { if (this.isEditing) { const i = this.products.findIndex(x => x.id === this.form.id); this.products[i] = JSON.parse(JSON.stringify(this.form)); } else { this.form.id = Date.now(); this.products.unshift(JSON.parse(JSON.stringify(this.form))); } await this.save(); this.showAdmin = false; this.notify('CAMBIOS GUARDADOS'); this.$nextTick(() => lucide.createIcons()); }
+            }
+        }
+    </script>
+</body>
+</html>
