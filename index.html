@@ -449,7 +449,7 @@
 
     <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
         <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
-        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v2.9</div>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v3.0</div>
     </footer>
 
     <!-- FAB Admin -->
@@ -638,7 +638,16 @@
                     });
                     return Object.keys(groups).sort().map(b => ({ brand: b, products: groups[b] }));
                 },
-                login() { if (this.loginU.toLowerCase() === 'admin' && this.loginP.toLowerCase() === 'admin123') { this.isAdmin = true; this.showLogin = false; this.notify('SISTEMA ACTIVADO'); } else { alert('Error'); } this.$nextTick(() => lucide.createIcons()); },
+                login() { 
+                    if (this.loginU.toLowerCase() === 'admin' && this.loginP.toLowerCase() === 'admin123') { 
+                        this.isAdmin = true; 
+                        this.showLogin = false; 
+                        this.notify('SISTEMA ACTIVADO'); 
+                    } else { 
+                        alert('Acceso Denegado'); 
+                    } 
+                    this.$nextTick(() => lucide.createIcons()); 
+                },
                 logout() { this.isAdmin = false; this.notify('SESIÓN CERRADA'); this.$nextTick(() => lucide.createIcons()); },
                 notify(msg) { this.toast.message = msg; this.toast.show = true; setTimeout(() => this.toast.show = false, 3000); },
                 openDetails(p) { this.activeProduct = {...p}; this.activeIdx = 0; this.isZoomed = false; this.showDetails = true; this.selectedSize = ''; this.currentSizes = p.sizes ? p.sizes.split(',').map(s => s.trim()) : []; this.$nextTick(() => lucide.createIcons()); },
