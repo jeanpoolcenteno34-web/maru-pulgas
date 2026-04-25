@@ -133,9 +133,12 @@
 
     <!-- Toast -->
     <template x-if="toast.show">
-        <div class="fixed top-10 left-1/2 -translate-x-1/2 z-[1000] reveal">
-            <div class="bg-premium-dark border border-gold-500/40 text-white px-10 py-5 rounded-full shadow-2xl flex items-center gap-4">
-                <span class="text-[11px] font-black tracking-widest uppercase" x-text="toast.message"></span>
+        <div class="fixed inset-0 z-[2000] flex items-center justify-center pointer-events-none reveal">
+            <div class="bg-premium-dark/90 backdrop-blur-xl border-2 border-gold-500/50 text-white px-12 py-6 rounded-3xl shadow-[0_0_100px_rgba(245,158,11,0.2)] flex flex-col items-center gap-3">
+                <div class="w-12 h-12 bg-gold-500 rounded-full flex items-center justify-center text-black shadow-lg">
+                    <i data-lucide="check" class="w-6 h-6"></i>
+                </div>
+                <span class="text-[12px] font-black tracking-[0.3em] uppercase text-center" x-text="toast.message"></span>
             </div>
         </div>
     </template>
@@ -143,7 +146,7 @@
     <!-- Barra de Navegación -->
     <nav class="premium-nav fixed top-0 w-full z-[100]">
         <div class="max-w-7xl mx-auto px-8 h-16 flex justify-between items-center">
-            <div class="flex items-center gap-4 group cursor-pointer" @click="window.scrollTo(0,0)">
+            <div class="flex items-center gap-4 group cursor-pointer" @click="window.scrollTo({top: 0, behavior: 'smooth'})">
                 <div class="w-5 h-5 bg-gold-500 rounded-xl flex items-center justify-center transform group-hover:rotate-12 transition-transform">
                     <i data-lucide="zap" class="text-black w-5 h-5"></i>
                 </div>
@@ -314,8 +317,17 @@
         <div @click="showAdmin = false" class="fixed inset-0 bg-black/98 backdrop-blur-3xl transition-opacity duration-500"></div>
         <div class="relative w-full max-w-5xl bg-premium-dark rounded-2xl shadow-2xl border-2 border-white/10 max-h-[90vh] overflow-hidden flex flex-col reveal">
             <div class="flex justify-between items-center px-6 py-4 border-b-2 border-white/10 bg-white/[0.02]">
-                <div class="flex items-center gap-4"><div class="w-8 h-8 bg-whatsapp/10 rounded-2xl flex items-center justify-center text-whatsapp shadow-2xl"><i data-lucide="settings" class="w-5 h-5"></i></div><h2 class="text-lg font-black text-white uppercase tracking-tighter" x-text="isEditing ? 'Editor de Producto' : 'Nueva Pieza'"></h2></div>
-                <button @click="showAdmin = false" class="p-3 bg-white/5 rounded-full text-white/40 hover:text-white transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <div class="flex items-center gap-4">
+                    <div class="w-8 h-8 bg-whatsapp/10 rounded-2xl flex items-center justify-center text-whatsapp shadow-2xl"><i data-lucide="settings" class="w-5 h-5"></i></div>
+                    <h2 class="text-lg font-black text-white uppercase tracking-tighter" x-text="isEditing ? 'Editor de Producto' : 'Panel de Control'"></h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-whatsapp/10 rounded-full border border-whatsapp/20">
+                        <div class="w-1.5 h-1.5 bg-whatsapp rounded-full animate-pulse"></div>
+                        <span class="text-[9px] font-black text-whatsapp uppercase tracking-widest">Nube Activa</span>
+                    </div>
+                    <button @click="showAdmin = false" class="p-3 bg-white/5 rounded-full text-white/40 hover:text-white transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
             </div>
             <div class="flex-1 overflow-y-auto p-4 lg:p-6">
                 <form @submit.prevent="saveProduct()" class="space-y-6">
@@ -334,6 +346,24 @@
                         <div><label class="dashboard-label">Descripción Detallada</label><textarea x-model="form.description" class="dashboard-input h-32 resize-none"></textarea></div>
                     </div>
                     <div class="space-y-6">
+                        <h4 class="text-xs font-black text-white/40 uppercase flex items-center gap-5">Estado del Producto</h4>
+                        <div class="flex gap-4">
+                            <button type="button" @click="form.outOfStock = false" 
+                                class="flex-1 p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-3" 
+                                :class="!form.outOfStock ? 'bg-whatsapp/10 border-whatsapp text-whatsapp' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/30'">
+                                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                                <span class="text-xs font-black uppercase tracking-widest">En Stock</span>
+                            </button>
+                            <button type="button" @click="form.outOfStock = true" 
+                                class="flex-1 p-4 rounded-2xl border-2 transition-all flex items-center justify-center gap-3" 
+                                :class="form.outOfStock ? 'bg-red-500/10 border-red-500 text-red-500' : 'bg-white/5 border-white/10 text-white/40 hover:border-white/30'">
+                                <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                                <span class="text-xs font-black uppercase tracking-widest">Agotado</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
                         <h4 class="text-xs font-black text-white/40 uppercase flex items-center gap-5">Galería Multimedia</h4>
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
                             <template x-for="(img, idx) in form.images" :key="idx">
@@ -348,7 +378,10 @@
                             <div class="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-white/20 bg-white/5 cursor-pointer hover:bg-white/10 hover:border-white/30 transition-all" @click="notify('Pega con Ctrl+V')"><i data-lucide="image-plus" class="w-8 h-8 mb-2"></i><span class="text-[10px] font-bold uppercase tracking-wider">Pegar Imagen</span></div>
                         </div>
                     </div>
-                    <button type="submit" class="w-full py-4 bg-whatsapp text-black text-sm font-black rounded-full shadow-2xl uppercase">GUARDAR CAMBIOS</button>
+                    <button type="submit" :disabled="isLoading" class="w-full py-4 bg-whatsapp text-black text-sm font-black rounded-full shadow-2xl uppercase disabled:opacity-50 disabled:cursor-wait">
+                        <span x-show="!isLoading">GUARDAR CAMBIOS</span>
+                        <span x-show="isLoading">GUARDANDO...</span>
+                    </button>
                 </form>
             </div>
         </div>
@@ -420,8 +453,7 @@
             return {
                 products: [], search: '', brandFilter: 'ALL', scrolled: false, isAdmin: false, showLogin: false, showAdmin: false, showDetails: false, isEditing: false, isZoomed: false, activeProduct: {images:[]}, activeIdx: 0, zoomPos: 'center', toast: { show: false, message: '' },
                 form: { id: null, name: '', brand: '', originalPrice: '', offerPrice: '', description: '', images: [], mainImage: '', sizes: '', outOfStock: false },
-                loginU: '', loginP: '', currentSizes: [], selectedSize: '',
-                
+                loginU: '', loginP: '', currentSizes: [], selectedSize: '', isLoading: false,
                 // --- CONFIGURACIÓN SUPABASE ---
                 supabaseUrl: 'https://yofnsgvdgecpbudilfgp.supabase.co',
                 supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZm5zZ3ZkZ2VjcGJ1ZGlsZmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwODYxNDksImV4cCI6MjA5MjY2MjE0OX0.upyTUPCOp4-81aEazkxBhrzRfHJjsVD_uT3n5qVsSoE',
@@ -458,60 +490,56 @@
                 },
 
                 async init() {
+                    // Garantizar iconos al inicio
+                    setTimeout(() => { if(window.lucide) lucide.createIcons(); }, 100);
+                    
                     window.scrollTo(0, 0);
                     history.replaceState(null, null, ' ');
                     window.addEventListener('scroll', () => this.scrolled = window.scrollY > 50);
                     
-                    // Inicializar Supabase si las llaves existen
-                    if (!this.supabaseUrl.includes('AQUÍ') && !this.supabaseKey.includes('AQUÍ')) {
-                        this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
-                    }
+                    // Inicializar Supabase con protección total
+                    try {
+                        if (window.supabase && !this.supabaseUrl.includes('AQUÍ') && !this.supabaseKey.includes('AQUÍ')) {
+                            this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
+                        }
+                    } catch(e) { console.warn('Supabase no disponible, usando modo local'); }
 
                     let cloudData = null;
                     if (this.supabase) {
                         try {
                             const { data, error } = await this.supabase.from('maru_products').select('data').eq('id', 1).single();
                             if (data && data.data) cloudData = data.data;
-                        } catch(e) { console.error('Error al conectar con la nube'); }
+                        } catch(e) { console.error('Error de nube:', e); }
                     }
 
                     if (cloudData) {
                         this.products = cloudData;
-                        await this.dbSet('maru_vElite_Final_v9', cloudData); // Cache local
+                        await this.dbSet('maru_vElite_Final_v9', cloudData);
                     } else {
-                        let savedDB = await this.dbGet('maru_vElite_Final_v9');
-                        if (savedDB) {
-                            this.products = savedDB;
-                        } else {
-                        // Migration from localStorage to IndexedDB
-                        let savedLocal = localStorage.getItem('maru_vElite_Final_v8') || localStorage.getItem('maru_vElite_Final_v5');
-                        if (savedLocal) {
-                            this.products = JSON.parse(savedLocal);
-                            // Append only the 3 new products
-                            if (!this.products.some(p => p.id === 106)) {
-                                this.products.push(
-                                    { id: 106, name: 'ADIDAS VL COURT 3.0', brand: 'Adidas', originalPrice: 259, offerPrice: 259, description: 'Zapatilla urbana de estilo clásico inspirada en el skate. Su parte superior de gamuza resistente y suave la hace ideal para combinar con tu look diario.', characteristics: 'Exterior de gamuza premium • Suela tipo cupsole de caucho resistente • Forro textil para mayor comodidad • Diseño clásico con las tres tiras', images: ['./assets/vl_court_green.png', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/2d9f4851221b4a0ab6efafc100c8f5d0_9366/Zapatillas_VL_Court_3.0_Verde_ID6285_01_standard.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/4f9e1e19eb0b4b2c9df7afc100c8e310_9366/Zapatillas_VL_Court_3.0_Verde_ID6285_02_standard_hover.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/d40d99516cb245cbb5beafc100c8e860_9366/Zapatillas_VL_Court_3.0_Verde_ID6285_03_standard.jpg'], mainImage: './assets/vl_court_green.png', sizes: '38, 39, 40, 41', outOfStock: false },
-                                    { id: 107, name: 'ADIDAS ADVANTAGE', brand: 'Adidas', originalPrice: 229, offerPrice: 229, description: 'Estilo tenístico de perfil bajo y estética minimalista. Una opción elegante y limpia perfecta para un estilo casual relajado durante todo el día.', characteristics: 'Exterior de piel sintética lisa • Plantilla Cloudfoam para amortiguación cómoda • Detalles perforados discretos • Suela de caucho vulcanizado', images: ['./assets/advantage_purple.png', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/7c5e53bf9ba64e43ab72af62010c7333_9366/Zapatillas_Advantage_Base_Morado_GW9214_01_standard.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/2bcffb3a164c48979140af62010c7ef0_9366/Zapatillas_Advantage_Base_Morado_GW9214_02_standard_hover.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/01f11c52b04746f39331af62010c85c2_9366/Zapatillas_Advantage_Base_Morado_GW9214_03_standard.jpg'], mainImage: './assets/advantage_purple.png', sizes: '36, 37, 38, 39', outOfStock: false },
-                                    { id: 108, name: 'ADIDAS LITE RACER 3.0', brand: 'Adidas', originalPrice: 199, offerPrice: 199, description: 'Un modelo ultra ligero inspirado en el calzado de running. Ofrece máxima comodidad gracias a su amortiguación Cloudfoam y es perfecto para días activos.', characteristics: 'Exterior de malla deportiva transpirable • Mediasuela y plantilla Cloudfoam • Extremadamente ligeras • Suela resistente para uso diario', images: ['./assets/lite_racer_black.png', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/6a761e05a8b74681a257ae2a00c6d9bc_9366/Zapatillas_Lite_Racer_3.0_Negro_GW7954_01_standard.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/4bcddce13dfb4e54911dae2a00c6eb2d_9366/Zapatillas_Lite_Racer_3.0_Negro_GW7954_02_standard_hover.jpg', 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/7dcddc1e7a4641edb391ae2a00c6e1d3_9366/Zapatillas_Lite_Racer_3.0_Negro_GW7954_03_standard.jpg'], mainImage: './assets/lite_racer_black.png', sizes: '36, 37, 38, 39', outOfStock: false }
-                                );
+                        try {
+                            let savedDB = await this.dbGet('maru_vElite_Final_v9');
+                            if (savedDB && savedDB.length > 0) {
+                                this.products = savedDB;
+                                // Sincronización final de rescate
+                                await this.save();
+                            } else {
+                                // Intento de recuperación de localStorage antiguo
+                                let savedLocal = localStorage.getItem('maru_vElite_Final_v8') || localStorage.getItem('maru_vElite_Final_v5');
+                                if (savedLocal) {
+                                    this.products = JSON.parse(savedLocal);
+                                    await this.save();
+                                } else {
+                                    // Fallback absoluto con productos base si todo falla
+                                    this.products = [
+                                        { id: 101, name: 'ADIDAS GRAND COURT BASE 2.0', brand: 'Adidas', originalPrice: 250, offerPrice: 250, description: 'Clásica.', images: ['./assets/grand_court.png'], mainImage: './assets/grand_court.png', sizes: '38, 39, 40', outOfStock: false }
+                                    ];
+                                }
                             }
-                        } else {
-                            // Absolute fallback
-                            this.products = [
-                                { id: 101, name: 'ADIDAS GRAND COURT BASE 2.0', brand: 'Adidas', originalPrice: 250, offerPrice: 250, description: 'Zapatilla clásica de estilo casual con las icónicas tres tiras. Diseño atemporal inspirado en el tenis de los años 70.', characteristics: 'Exterior de piel sintética suave • Amortiguación ligera de EVA', images: ['./assets/grand_court.png'], mainImage: './assets/grand_court.png', sizes: '38, 39, 40', outOfStock: false },
-                                { id: 102, name: 'ADIDAS GAMECHASER', brand: 'Adidas', originalPrice: 240, offerPrice: 240, description: 'Calzado diseñado para brindar comodidad y rendimiento. Silueta moderna con detalles metálicos, ideal para dentro y fuera de la cancha.', characteristics: 'Exterior combinado de malla y material sintético', images: ['./assets/gamechaser.png'], mainImage: './assets/gamechaser.png', sizes: '40, 41, 42, 43', outOfStock: false },
-                                { id: 103, name: 'ADIDAS STREETCHECK', brand: 'Adidas', originalPrice: 280, offerPrice: 280, description: 'Lleva el legado del baloncesto a las calles con estas zapatillas inspiradas en las emblemáticas Superstar.', characteristics: 'Exterior de piel con la clásica puntera de goma', images: ['./assets/streetcheck.png'], mainImage: './assets/streetcheck.png', sizes: '36, 37, 38', outOfStock: false },
-                                { id: 104, name: 'ADIDAS CAMPUS 00S', brand: 'Adidas', originalPrice: 430, offerPrice: 430, description: 'La mítica Campus se reinventa inspirándose en el estilo skater de los años 2000.', characteristics: 'Exterior de gamuza suave de alta calidad', images: ['./assets/campus_yellow.png'], mainImage: './assets/campus_yellow.png', sizes: '38, 39, 40', outOfStock: false },
-                                { id: 105, name: 'ADIDAS HANDBALL SPEZIAL', brand: 'Adidas', originalPrice: 400, offerPrice: 400, description: 'Revive el estilo vintage de los 70 con esta zapatilla de balonmano convertida en icono de la moda urbana.', characteristics: 'Exterior de ante de primera calidad', images: ['./assets/spezial_blue.png'], mainImage: './assets/spezial_blue.png', sizes: '40, 41', outOfStock: false },
-                                { id: 106, name: 'ADIDAS VL COURT 3.0', brand: 'Adidas', originalPrice: 259, offerPrice: 259, description: 'Zapatilla urbana de estilo clásico inspirada en el skate.', characteristics: 'Exterior de gamuza premium', images: ['./assets/vl_court_green.png'], mainImage: './assets/vl_court_green.png', sizes: '38, 39, 40, 41', outOfStock: false },
-                                { id: 107, name: 'ADIDAS ADVANTAGE', brand: 'Adidas', originalPrice: 229, offerPrice: 229, description: 'Estilo tenístico de perfil bajo y estética minimalista.', characteristics: 'Exterior de piel sintética lisa', images: ['./assets/advantage_purple.png'], mainImage: './assets/advantage_purple.png', sizes: '36, 37, 38', outOfStock: false },
-                                { id: 108, name: 'ADIDAS LITE RACER 3.0', brand: 'Adidas', originalPrice: 199, offerPrice: 199, description: 'Un modelo ultra ligero inspirado en el calzado de running.', characteristics: 'Exterior de malla deportiva transpirable', images: ['./assets/lite_racer_black.png'], mainImage: './assets/lite_racer_black.png', sizes: '36, 37, 38', outOfStock: false }
-                            ];
-                        }
-                        await this.save();
+                        } catch(e) { console.error('Error de recuperación:', e); }
                     }
+                    
                     this.isAdmin = localStorage.getItem('maru_admin_session') === 'true';
-                    this.$nextTick(() => lucide.createIcons());
+                    this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
                     
                     if (!window._pasteListenerAdded) {
                         window._pasteListenerAdded = true;
@@ -574,12 +602,91 @@
                 notify(msg) { this.toast.message = msg; this.toast.show = true; setTimeout(() => this.toast.show = false, 3000); },
                 openDetails(p) { this.activeProduct = {...p}; this.activeIdx = 0; this.isZoomed = false; this.showDetails = true; this.selectedSize = ''; this.currentSizes = p.sizes ? p.sizes.split(',').map(s => s.trim()) : []; this.$nextTick(() => lucide.createIcons()); },
                 closeDetails() { this.showDetails = false; this.isZoomed = false; },
+                getWhatsAppUrl(p) {
+                    const text = `Hola, me interesa este modelo ${p.name.toUpperCase()} de la marca ${p.brand.toUpperCase()}.`;
+                    return `https://wa.me/51963084614?text=${encodeURIComponent(text)}`;
+                },
                 nextImg() { if (this.activeIdx < this.activeProduct.images.length - 1) { this.activeIdx++; this.isZoomed = false; } },
                 prevImg() { if (this.activeIdx > 0) { this.activeIdx--; this.isZoomed = false; } },
                 handleZoom(e) { if (this.isZoomed) { const rect = e.currentTarget.getBoundingClientRect(); this.zoomPos = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`; } },
                 openNew() { this.isEditing = false; this.form = { id: null, name: '', brand: '', originalPrice: '', offerPrice: '', description: '', images: [], mainImage: '', sizes: '', outOfStock: false }; this.showAdmin = true; this.$nextTick(() => lucide.createIcons()); },
                 editProduct(p) { this.isEditing = true; this.form = JSON.parse(JSON.stringify(p)); this.showAdmin = true; this.$nextTick(() => lucide.createIcons()); },
-                async saveProduct() { if (this.isEditing) { const i = this.products.findIndex(x => x.id === this.form.id); this.products[i] = JSON.parse(JSON.stringify(this.form)); } else { this.form.id = Date.now(); this.products.unshift(JSON.parse(JSON.stringify(this.form))); } await this.save(); this.showAdmin = false; this.notify('CAMBIOS GUARDADOS'); this.$nextTick(() => lucide.createIcons()); }
+                async saveProduct() { 
+                    if (this.isLoading) return;
+                    this.isLoading = true;
+                    
+                    // Actualización local INSTANTÁNEA
+                    if (this.isEditing) { 
+                        const i = this.products.findIndex(x => x.id === this.form.id); 
+                        if (i !== -1) this.products[i] = JSON.parse(JSON.stringify(this.form)); 
+                    } else { 
+                        this.form.id = Date.now(); 
+                        this.products.unshift(JSON.parse(JSON.stringify(this.form))); 
+                    } 
+                    
+                    this.showAdmin = false; 
+                    this.notify('CAMBIOS GUARDADOS');
+                    
+                    // Guardado en segundo plano
+                    await this.save(); 
+                    this.isLoading = false;
+                    this.$nextTick(() => lucide.createIcons()); 
+                },
+                async deleteProduct(id) {
+                    if (!confirm('¿Eliminar este producto?')) return;
+                    this.products = this.products.filter(p => p.id !== id);
+                    this.notify('PRODUCTO ELIMINADO');
+                    await this.save();
+                    this.$nextTick(() => lucide.createIcons());
+                },
+                async syncToCloud() {
+                    if (!this.supabase) return alert('Supabase no configurado');
+                    this.notify('Sincronizando...');
+                    try {
+                        const cleanProducts = JSON.parse(JSON.stringify(this.products));
+                        const { error } = await this.supabase.from('maru_products').upsert({ id: 1, data: cleanProducts });
+                        if (error) throw error;
+                        this.notify('¡NUBE ACTUALIZADA!');
+                    } catch(e) {
+                        console.error(e);
+                        alert('Error al sincronizar: ' + e.message);
+                    }
+                },
+                recoverOldData() {
+                    const keys = [
+                        'maru_vElite_Final_v9', 'maru_vElite_Final_v8', 'maru_vElite_Final_v7', 
+                        'maru_vElite_Final_v6', 'maru_vElite_Final_v5', 'maru_vElite_Final_v4',
+                        'maru_vElite_Final_v3', 'maru_vElite_Final_v2', 'maru_vElite_Final_v1',
+                        'maru_products', 'maru_v5', 'maru_vElite'
+                    ];
+                    
+                    let allProductsMap = {};
+                    keys.forEach(key => {
+                        const data = localStorage.getItem(key);
+                        if (data) {
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (Array.isArray(parsed)) {
+                                    parsed.forEach(p => {
+                                        if (!allProductsMap[p.id] || (p.images && p.images.length > allProductsMap[p.id].images.length)) {
+                                            allProductsMap[p.id] = p;
+                                        }
+                                    });
+                                }
+                            } catch(e) {}
+                        }
+                    });
+                    
+                    const merged = Object.values(allProductsMap).sort((a, b) => b.id - a.id);
+                    
+                    if (merged.length > 0) {
+                        this.products = merged;
+                        this.save();
+                        this.notify('¡FUSIÓN DE ' + merged.length + ' PRODUCTOS EXITOSA!');
+                    } else {
+                        alert('No se encontraron datos en ninguna versión de la memoria local.');
+                    }
+                }
             }
         }
     </script>
