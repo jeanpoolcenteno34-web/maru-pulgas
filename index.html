@@ -330,8 +330,8 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-whatsapp/10 rounded-full border border-whatsapp/20">
-                        <div class="w-1.5 h-1.5 bg-whatsapp rounded-full animate-pulse"></div>
-                        <span class="text-[9px] font-black text-whatsapp uppercase tracking-widest">Nube (Firebase)</span>
+                        <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="dbConnected ? 'bg-whatsapp' : 'bg-red-500'"></div>
+                        <span class="text-[9px] font-black uppercase tracking-widest" :class="dbConnected ? 'text-whatsapp' : 'text-red-500'" x-text="dbConnected ? 'Nube (v3.4)' : 'Desconectado'"></span>
                     </div>
                     <button @click="showAdmin = false" class="p-3 bg-white/5 rounded-full text-white/40 hover:text-white transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
@@ -450,7 +450,7 @@
 
     <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
         <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
-        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v3.3</div>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v3.4</div>
     </footer>
 
     <!-- FAB Admin -->
@@ -473,7 +473,7 @@
                     appId: "1:1013308884398:web:98c5fdb1c93836929bf43f",
                     measurementId: "G-63MSHC1X0Y"
                 },
-                db: null,
+                db: null, dbConnected: false,
                 // ---------------------------------------------------------
                 
                 initDB() {
@@ -532,32 +532,39 @@
                             firebase.initializeApp(this.firebaseConfig);
                         }
                         this.db = firebase.database();
+
+                        // Monitor de conexión
+                        this.db.ref('.info/connected').on('value', (snap) => {
+                            this.dbConnected = snap.val() === true;
+                            if (!this.dbConnected) console.warn('Firebase: Conexión perdida');
+                        });
                         
-                        // Escucha en tiempo real
+                        // Escucha en tiempo real con optimización
                         const productsRef = this.db.ref('products');
                         productsRef.on('value', async (snapshot) => {
                             const cloudData = snapshot.val();
                             
                             if (cloudData && cloudData.items) {
-                                // Sincronización instantánea: si los datos de la nube son diferentes a los locales, actualizamos.
                                 const cloudItems = cloudData.items;
-                                const hasChanges = JSON.stringify(this.products) !== JSON.stringify(cloudItems);
                                 
-                                if (hasChanges || !this.products.length) {
+                                // Comparación rápida de longitud y timestamp antes del stringify pesado
+                                const localLastSync = localStorage.getItem('maru_last_sync') || '0';
+                                const cloudTS = (cloudData._ts || 0).toString();
+                                
+                                if (cloudTS !== localLastSync || this.products.length !== cloudItems.length) {
+                                    console.log('Firebase: Sincronizando cambios...');
                                     this.products = cloudItems;
                                     await this.dbSet('maru_vElite_Final_v9', cloudItems);
-                                    const cloudTime = cloudData._ts || Date.now();
-                                    localStorage.setItem('maru_last_sync', cloudTime.toString());
+                                    localStorage.setItem('maru_last_sync', cloudTS);
                                     
-                                    // Solo notificar si no es la carga inicial
                                     if (window._hasInitialLoad) {
-                                        this.notify('CAMBIO EN TIEMPO REAL');
+                                        this.notify('TIENDA ACTUALIZADA');
                                     }
                                     window._hasInitialLoad = true;
+                                    this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
                                 }
                             } else if (this.products.length > 0) {
-                                // MIGRACIÓN: Si la nube está vacía pero tenemos datos locales, los subimos
-                                console.log('Migrando datos locales a Firebase...');
+                                console.log('Firebase: Iniciando migración de datos locales...');
                                 this.save();
                             }
                         });
