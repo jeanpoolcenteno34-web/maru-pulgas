@@ -539,15 +539,21 @@
                             const cloudData = snapshot.val();
                             
                             if (cloudData && cloudData.items) {
-                                // Si hay datos en la nube, los sincronizamos si son más nuevos o si lo local está vacío
-                                const cloudTime = cloudData._ts || 0;
-                                const localTime = parseInt(localStorage.getItem('maru_last_sync') || '0');
+                                // Sincronización instantánea: si los datos de la nube son diferentes a los locales, actualizamos.
+                                const cloudItems = cloudData.items;
+                                const hasChanges = JSON.stringify(this.products) !== JSON.stringify(cloudItems);
                                 
-                                if (cloudTime > localTime || !this.products.length) {
-                                    this.products = cloudData.items;
-                                    await this.dbSet('maru_vElite_Final_v9', cloudData.items);
+                                if (hasChanges || !this.products.length) {
+                                    this.products = cloudItems;
+                                    await this.dbSet('maru_vElite_Final_v9', cloudItems);
+                                    const cloudTime = cloudData._ts || Date.now();
                                     localStorage.setItem('maru_last_sync', cloudTime.toString());
-                                    if (localTime > 0) this.notify('SINCRONIZADO CON LA NUBE');
+                                    
+                                    // Solo notificar si no es la carga inicial
+                                    if (window._hasInitialLoad) {
+                                        this.notify('CAMBIO EN TIEMPO REAL');
+                                    }
+                                    window._hasInitialLoad = true;
                                 }
                             } else if (this.products.length > 0) {
                                 // MIGRACIÓN: Si la nube está vacía pero tenemos datos locales, los subimos
