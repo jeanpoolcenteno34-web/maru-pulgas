@@ -10,7 +10,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
     <script>
         tailwind.config = {
@@ -330,7 +331,7 @@
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-whatsapp/10 rounded-full border border-whatsapp/20">
                         <div class="w-1.5 h-1.5 bg-whatsapp rounded-full animate-pulse"></div>
-                        <span class="text-[9px] font-black text-whatsapp uppercase tracking-widest">Nube Activa</span>
+                        <span class="text-[9px] font-black text-whatsapp uppercase tracking-widest">Nube (Firebase)</span>
                     </div>
                     <button @click="showAdmin = false" class="p-3 bg-white/5 rounded-full text-white/40 hover:text-white transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
@@ -461,11 +462,19 @@
                 products: [], search: '', brandFilter: 'ALL', scrolled: false, isAdmin: false, showLogin: false, showAdmin: false, showDetails: false, isEditing: false, isZoomed: false, activeProduct: {images:[]}, activeIdx: 0, zoomPos: 'center', toast: { show: false, message: '' },
                 form: { id: null, name: '', brand: '', originalPrice: '', offerPrice: '', description: '', images: [], mainImage: '', sizes: '', outOfStock: false },
                 loginU: '', loginP: '', currentSizes: [], selectedSize: '', isLoading: false,
-                // --- CONFIGURACIÓN SUPABASE ---
-                supabaseUrl: 'https://yofnsgvdgecpbudilfgp.supabase.co',
-                supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZm5zZ3ZkZ2VjcGJ1ZGlsZmdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwODYxNDksImV4cCI6MjA5MjY2MjE0OX0.upyTUPCOp4-81aEazkxBhrzRfHJjsVD_uT3n5qVsSoE',
-                supabase: null,
-                // ------------------------------
+                // --- CONFIGURACIÓN FIREBASE (ACTUALIZADA) ---
+                firebaseConfig: {
+                    apiKey: "AIzaSyCf77OEgulsoQS6UoQ9ed5dV6LnTsrYrmk",
+                    authDomain: "marupulgasstore.firebaseapp.com",
+                    databaseURL: "https://marupulgasstore-default-rtdb.firebaseio.com",
+                    projectId: "marupulgasstore",
+                    storageBucket: "marupulgasstore.firebasestorage.app",
+                    messagingSenderId: "1013308884398",
+                    appId: "1:1013308884398:web:98c5fdb1c93836929bf43f",
+                    measurementId: "G-63MSHC1X0Y"
+                },
+                db: null,
+                // ---------------------------------------------------------
                 
                 initDB() {
                     return new Promise((resolve, reject) => {
@@ -517,50 +526,40 @@
                         }
                     } catch(e) {}
 
-                    // 2. INICIALIZAR SUPABASE Y SINCRONIZAR (Nube)
+                    // 2. INICIALIZAR FIREBASE Y SINCRONIZAR (Tiempo Real)
                     try {
-                        if (window.supabase && !this.supabaseUrl.includes('AQUÍ') && !this.supabaseKey.includes('AQUÍ')) {
-                            this.supabase = supabase.createClient(this.supabaseUrl, this.supabaseKey);
+                        if (!firebase.apps.length) {
+                            firebase.initializeApp(this.firebaseConfig);
                         }
+                        this.db = firebase.database();
                         
-                        if (this.supabase) {
-                            const { data } = await this.supabase.from('maru_products').select('data').eq('id', 1).maybeSingle();
-                            if (data && data.data) {
-                                const cloudItems = data.data._ts ? data.data.items : data.data;
-                                const cloudTime = data.data._ts || 0;
+                        // Escucha en tiempo real
+                        const productsRef = this.db.ref('products');
+                        productsRef.on('value', async (snapshot) => {
+                            const cloudData = snapshot.val();
+                            
+                            if (cloudData && cloudData.items) {
+                                // Si hay datos en la nube, los sincronizamos si son más nuevos o si lo local está vacío
+                                const cloudTime = cloudData._ts || 0;
                                 const localTime = parseInt(localStorage.getItem('maru_last_sync') || '0');
-
+                                
                                 if (cloudTime > localTime || !this.products.length) {
-                                    this.products = cloudItems;
-                                    await this.dbSet('maru_vElite_Final_v9', cloudItems);
-                                    if (cloudTime) localStorage.setItem('maru_last_sync', cloudTime.toString());
+                                    this.products = cloudData.items;
+                                    await this.dbSet('maru_vElite_Final_v9', cloudData.items);
+                                    localStorage.setItem('maru_last_sync', cloudTime.toString());
+                                    if (localTime > 0) this.notify('SINCRONIZADO CON LA NUBE');
                                 }
+                            } else if (this.products.length > 0) {
+                                // MIGRACIÓN: Si la nube está vacía pero tenemos datos locales, los subimos
+                                console.log('Migrando datos locales a Firebase...');
+                                this.save();
                             }
-                        }
-                    } catch(e) { console.error('Error de sincronización:', e); }
+                        });
 
-                    this.isAdmin = false;
-                    this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
-                    
-                    // Auto-sincronización cada 5 segundos para ver cambios casi en tiempo real
-                    setInterval(async () => {
-                        if (this.supabase && !this.showAdmin && !this.isLoading) {
-                            try {
-                                const { data } = await this.supabase.from('maru_products').select('data').eq('id', 1).maybeSingle();
-                                if (data && data.data && data.data._ts) {
-                                    const cloudTime = data.data._ts;
-                                    const localTime = parseInt(localStorage.getItem('maru_last_sync') || '0');
-                                    
-                                    if (cloudTime > localTime && JSON.stringify(data.data.items) !== JSON.stringify(this.products)) {
-                                        this.products = data.data.items;
-                                        await this.dbSet('maru_vElite_Final_v9', data.data.items);
-                                        localStorage.setItem('maru_last_sync', cloudTime.toString());
-                                        this.notify('TIENDA ACTUALIZADA');
-                                    }
-                                }
-                            } catch(e) {}
-                        }
-                    }, 5000);
+                    } catch(e) { 
+                        console.error('Error de Firebase:', e);
+                        this.notify('ERROR DE CONEXIÓN NUBE');
+                    }
                     
                     if (!window._pasteListenerAdded) {
                         window._pasteListenerAdded = true;
@@ -595,13 +594,13 @@
                     await this.dbSet('maru_vElite_Final_v9', cleanProducts);
                     localStorage.setItem('maru_last_sync', now.toString());
                     
-                    if (this.supabase) {
+                    if (this.db) {
                         try {
-                            await this.supabase.from('maru_products').upsert({ 
-                                id: 1, 
-                                data: { items: cleanProducts, _ts: now }
+                            await this.db.ref('products').set({
+                                items: cleanProducts,
+                                _ts: now
                             });
-                        } catch(e) { console.error('Error al sincronizar con la nube'); }
+                        } catch(e) { console.error('Error al sincronizar con Firebase'); }
                     }
                 },
                 compressImage(base64, callback) {
@@ -686,12 +685,10 @@
                     this.$nextTick(() => lucide.createIcons());
                 },
                 async syncToCloud() {
-                    if (!this.supabase) return alert('Supabase no configurado');
+                    if (!this.db) return alert('Firebase no configurado');
                     this.notify('Sincronizando...');
                     try {
-                        const cleanProducts = JSON.parse(JSON.stringify(this.products));
-                        const { error } = await this.supabase.from('maru_products').upsert({ id: 1, data: cleanProducts });
-                        if (error) throw error;
+                        await this.save();
                         this.notify('¡NUBE ACTUALIZADA!');
                     } catch(e) {
                         console.error(e);
