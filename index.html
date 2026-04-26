@@ -558,7 +558,7 @@
 
                     } catch(e) { 
                         console.error('Error de Firebase:', e);
-                        this.notify('ERROR DE CONEXIÓN NUBE');
+                        // Eliminamos la notificación visual de error para que no moleste al usuario
                     }
                     
                     if (!window._pasteListenerAdded) {
