@@ -473,7 +473,9 @@
                     appId: "1:1013308884398:web:98c5fdb1c93836929bf43f",
                     measurementId: "G-63MSHC1X0Y"
                 },
-                db: null, dbConnected: false,
+                // Propiedades técnicas (no reactivas para evitar conflictos con Firebase)
+                _db: null,
+                dbConnected: false,
                 // ---------------------------------------------------------
                 
                 initDB() {
@@ -531,20 +533,21 @@
                         if (!firebase.apps.length) {
                             firebase.initializeApp(this.firebaseConfig);
                         }
-                        this.db = firebase.database();
+                        this._db = firebase.database();
 
                         // Monitor de conexión
-                        this.db.ref('.info/connected').on('value', (snap) => {
+                        this._db.ref('.info/connected').on('value', (snap) => {
                             this.dbConnected = snap.val() === true;
-                            if (!this.dbConnected) console.warn('Firebase: Conexión perdida');
                         });
                         
-                        // Escucha en tiempo real con optimización
-                        const productsRef = this.db.ref('products');
+                        // Escucha en tiempo real con optimización y CLONACIÓN PROFUNDA
+                        const productsRef = this._db.ref('products');
                         productsRef.on('value', async (snapshot) => {
-                            const cloudData = snapshot.val();
+                            const rawData = snapshot.val();
                             
-                            if (cloudData && cloudData.items) {
+                            if (rawData && rawData.items) {
+                                // Clonamos para evitar que Alpine Proxy choque con Firebase
+                                const cloudData = JSON.parse(JSON.stringify(rawData));
                                 const cloudItems = cloudData.items;
                                 
                                 // Comparación rápida de longitud y timestamp antes del stringify pesado
@@ -607,9 +610,9 @@
                     await this.dbSet('maru_vElite_Final_v9', cleanProducts);
                     localStorage.setItem('maru_last_sync', now.toString());
                     
-                    if (this.db) {
+                    if (this._db) {
                         try {
-                            await this.db.ref('products').set({
+                            await this._db.ref('products').set({
                                 items: cleanProducts,
                                 _ts: now
                             });
@@ -698,7 +701,7 @@
                     this.$nextTick(() => lucide.createIcons());
                 },
                 async syncToCloud() {
-                    if (!this.db) return alert('Firebase no configurado');
+                    if (!this._db) return alert('Firebase no configurado');
                     this.notify('Sincronizando...');
                     try {
                         await this.save();
