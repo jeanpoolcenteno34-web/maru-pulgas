@@ -533,7 +533,7 @@
                 },
                 async dbSaveLocal() {
                     const db = await this.initDB();
-                    db.transaction('store', 'readwrite').objectStore('store').put(JSON.parse(JSON.stringify(this.products)), 'maru_products');
+                    db.transaction('store', 'readwrite').objectStore('store').put(JSON.parse(JSON.stringify(this.products)), 'maru_vElite_Final_v9');
                 },
 
                 async init() {
@@ -548,7 +548,7 @@
 
                     // 1. CARGA INSTANTÁNEA (Memoria Local)
                     try {
-                        const localData = await this.dbGet('maru_products');
+                        const localData = await this.dbGet('maru_vElite_Final_v9');
                         if (localData && localData.length > 0) {
                             this.products = localData;
                         }
