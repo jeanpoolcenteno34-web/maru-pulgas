@@ -508,76 +508,70 @@
                 },
                 dbConnected: false,
 
+                // --- HELPER DE WHATSAPP ---
+                getWhatsAppUrl(p) {
+                    if (!p || !p.brand || !p.name) return '#';
+                    const msg = `Hola Maru Pulgas! Me interesan las ${p.brand.toUpperCase()} ${p.name.toUpperCase()}. ¿Están disponibles?`;
+                    return `https://wa.me/51912836261?text=${encodeURIComponent(msg)}`;
+                },
+
+                // --- MANEJO DE DATOS LOCALES ---
+                initDB() {
+                    return new Promise((resolve) => {
+                        const req = indexedDB.open('MaruPulgasDB', 1);
+                        req.onupgradeneeded = (e) => e.target.result.createObjectStore('store');
+                        req.onsuccess = (e) => resolve(e.target.result);
+                    });
+                },
+                async dbGet(k) {
+                    const db = await this.initDB();
+                    return new Promise((r) => {
+                        const t = db.transaction('store', 'readonly').objectStore('store').get(k);
+                        t.onsuccess = () => r(t.result);
+                        t.onerror = () => r(null);
+                    });
+                },
+                async dbSaveLocal() {
+                    const db = await this.initDB();
+                    db.transaction('store', 'readwrite').objectStore('store').put(JSON.parse(JSON.stringify(this.products)), 'maru_products');
+                },
+
                 async init() {
-                    // Garantizar iconos al inicio
                     setTimeout(() => { if(window.lucide) lucide.createIcons(); }, 100);
-                    
                     window.scrollTo(0, 0);
-                    // Limpieza total de URL para privacidad
                     try {
                         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
                         window.history.replaceState({path: cleanUrl}, '', cleanUrl);
                         this.search = ''; this.loginU = ''; this.loginP = '';
                     } catch(e) {}
                     window.addEventListener('scroll', () => this.scrolled = window.scrollY > 50);
-                    
+
                     // 1. CARGA INSTANTÁNEA (Memoria Local)
                     try {
-                        const localData = await this.dbGet('maru_vElite_Final_v9');
+                        const localData = await this.dbGet('maru_products');
                         if (localData && localData.length > 0) {
                             this.products = localData;
                         }
                     } catch(e) {}
 
-                    // 2. INICIALIZAR FIREBASE Y SINCRONIZAR (Tiempo Real)
-                    try {
-                        if (!firebase.apps.length) {
-                            firebase.initializeApp(this.firebaseConfig);
+                    // 2. INICIALIZAR PUENTE DE FIREBASE (Aislado)
+                    window.MARU_CLOUD.init(this.firebaseConfig, (msg) => {
+                        if (msg.type === 'connection') {
+                            this.dbConnected = msg.value;
+                        } else if (msg.type === 'data') {
+                            this.products = msg.items; // Ya viene clonado del puente
+                            this.dbSaveLocal();
+                            this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
                         }
-                        this._db = firebase.database();
+                    });
 
-                        // Monitor de conexión
-                        this._db.ref('.info/connected').on('value', (snap) => {
-                            this.dbConnected = snap.val() === true;
-                        });
-                        
-                        // Escucha en tiempo real con optimización y CLONACIÓN PROFUNDA
-                        const productsRef = this._db.ref('products');
-                        productsRef.on('value', async (snapshot) => {
-                            const rawData = snapshot.val();
-                            
-                            if (rawData && rawData.items) {
-                                // Clonamos para evitar que Alpine Proxy choque con Firebase
-                                const cloudData = JSON.parse(JSON.stringify(rawData));
-                                const cloudItems = cloudData.items;
-                                
-                                // Comparación rápida de longitud y timestamp antes del stringify pesado
-                                const localLastSync = localStorage.getItem('maru_last_sync') || '0';
-                                const cloudTS = (cloudData._ts || 0).toString();
-                                
-                                if (cloudTS !== localLastSync || this.products.length !== cloudItems.length) {
-                                    console.log('Firebase: Sincronizando cambios...');
-                                    this.products = cloudItems;
-                                    await this.dbSet('maru_vElite_Final_v9', cloudItems);
-                                    localStorage.setItem('maru_last_sync', cloudTS);
-                                    
-                                    if (window._hasInitialLoad) {
-                                        this.notify('TIENDA ACTUALIZADA');
-                                    }
-                                    window._hasInitialLoad = true;
-                                    this.$nextTick(() => { if(window.lucide) lucide.createIcons(); });
-                                }
-                            } else if (this.products.length > 0) {
-                                console.log('Firebase: Iniciando migración de datos locales...');
-                                this.save();
-                            }
-                        });
+                    // Si la nube está vacía después de 3 segundos, subir datos locales iniciales
+                    setTimeout(async () => {
+                        if (this.dbConnected && window.MARU_CLOUD.lastSync === 0 && this.products.length > 0) {
+                            await window.MARU_CLOUD.save(this.products);
+                        }
+                    }, 3000);
 
-                    } catch(e) { 
-                        console.error('Error de Firebase:', e);
-                        // Eliminamos la notificación visual de error para que no moleste al usuario
-                    }
-                    
                     if (!window._pasteListenerAdded) {
                         window._pasteListenerAdded = true;
                         let isPasting = false;
@@ -605,20 +599,10 @@
                     }
                 },
                 async save() {
-                    const cleanProducts = JSON.parse(JSON.stringify(this.products));
-                    const now = Date.now();
-                    
-                    await this.dbSet('maru_vElite_Final_v9', cleanProducts);
-                    localStorage.setItem('maru_last_sync', now.toString());
-                    
-                    if (this._db) {
-                        try {
-                            await this._db.ref('products').set({
-                                items: cleanProducts,
-                                _ts: now
-                            });
-                        } catch(e) { console.error('Error al sincronizar con Firebase'); }
-                    }
+                    // La UI ya actualizó `this.products` cuando cerramos el modal, 
+                    // simplemente guardamos el estado actual.
+                    await this.dbSaveLocal();
+                    await window.MARU_CLOUD.save(this.products);
                 },
                 compressImage(base64, callback) {
                     const img = new Image();
