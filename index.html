@@ -131,7 +131,7 @@
         .showroom-frame { background: radial-gradient(circle at center, #111 0%, #000 100%); }
     </style>
 </head>
-<body x-data="maruStore()" x-init="init()" :class="{ 'modal-open': showDetails || showAdmin || showLogin }">
+<body x-data="maruStore()" x-init="init()" :class="{ 'modal-open': showDetails || showAdmin || showLogin || showShareModal }">
 
     <!-- Toast -->
     <template x-if="toast.show">
@@ -415,8 +415,8 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center reveal">
                 <div class="space-y-8">
                     <div class="space-y-2">
-                        <h2 class="text-4xl lg:text-5xl font-black font-display tracking-tighter uppercase leading-[0.85]">MARU PULGAS</h2>
-                        <p class="text-gold-500 font-bold text-base lg:text-lg tracking-tighter uppercase italic">Nuestro Showroom en La Molina</p>
+                        <h2 class="text-4xl lg:text-5xl font-black font-display tracking-tighter uppercase leading-[0.85]">MARU PULGAS - FERIA</h2>
+                        <p class="text-gold-500 font-bold text-base lg:text-lg tracking-tighter uppercase italic">Nuestra Feria en La Molina</p>
                     </div>
                     
                     <div class="space-y-6">
@@ -452,42 +452,48 @@
 
     <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
         <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
-        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v4</div>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v4.5</div>
     </footer>
 
     <!-- Share/Export Modal -->
     <div x-show="showShareModal" x-cloak class="fixed inset-0 z-[600] flex items-center justify-center p-4">
         <div @click="showShareModal = false" class="fixed inset-0 bg-black/98 backdrop-blur-3xl transition-opacity duration-500"></div>
-        <div class="relative w-full max-w-4xl bg-premium-dark rounded-3xl border-2 border-gold-500/20 shadow-2xl flex flex-col md:flex-row overflow-hidden reveal">
+        <div class="relative w-full max-w-[90vw] lg:max-w-[85vw] bg-premium-dark rounded-3xl border-2 border-gold-500/20 shadow-2xl flex flex-col md:flex-row max-h-[95vh] overflow-y-auto reveal">
             <button @click="showShareModal = false" class="absolute top-4 right-4 z-[610] p-2 bg-black/80 text-white rounded-full hover:bg-gold-500 hover:text-black transition-all shadow-xl"><i data-lucide="x" class="w-5 h-5"></i></button>
 
-            <div class="w-full md:w-1/2 bg-black/50 p-8 flex items-center justify-center border-r border-white/10 relative">
-                <div class="aspect-[9/16] w-full max-w-[260px] bg-premium-black rounded-xl border border-white/10 overflow-hidden relative shadow-[0_0_50px_rgba(251,191,36,0.15)] flex items-center justify-center">
+            <div class="w-full md:w-1/2 bg-black/50 p-8 flex items-center justify-center border-b md:border-b-0 md:border-r border-white/10 relative min-h-[400px]">
+                <div :class="imageFormat === 'horizontal' ? 'aspect-[16/9] max-w-[800px]' : 'aspect-[3/4] max-w-[500px]'" class="w-full bg-premium-black rounded-xl border border-white/10 overflow-hidden relative shadow-[0_0_50px_rgba(251,191,36,0.15)] flex items-center justify-center transition-all duration-300">
                     <div x-show="!previewImage" class="flex flex-col items-center justify-center text-white/40">
                         <i data-lucide="loader" class="w-8 h-8 animate-spin mb-3"></i>
                         <span class="text-[10px] font-black uppercase tracking-widest text-center">Generando<br>Premium Preview</span>
                     </div>
-                    <img x-show="previewImage" :src="previewImage" class="w-full h-full object-cover">
+                    <img x-show="previewImage" :src="previewImage" class="w-full h-full object-contain">
                 </div>
             </div>
 
-            <div class="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-center space-y-8 relative z-10">
-                <div>
-                    <div class="inline-flex items-center gap-2 px-3 py-1 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[10px] font-black tracking-widest uppercase rounded-full mb-5">
-                        <i data-lucide="instagram" class="w-3 h-3"></i> Redes Sociales
+            <div class="w-full md:w-1/2 p-8 lg:p-12 flex flex-col justify-center space-y-10 relative z-10 items-center text-center">
+                <div class="flex flex-col items-center">
+                    <div class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-[11px] font-black tracking-widest uppercase rounded-full mb-6">
+                        <i data-lucide="instagram" class="w-4 h-4"></i> Redes Sociales
                     </div>
-                    <h2 class="text-3xl lg:text-4xl font-black text-white uppercase tracking-tighter leading-tight mb-3">Generador<br><span class="text-gold-500">Imágenes</span></h2>
-                    <p class="text-white/40 text-sm font-medium leading-relaxed">Crea al instante una imagen de alta conversión para historias de Instagram, Facebook o estados de WhatsApp.</p>
+                    <h2 class="text-4xl lg:text-5xl font-black text-white uppercase tracking-tighter leading-tight mb-4">Generador<br><span class="text-gold-500">Imágenes</span> <span class="text-lg text-white/20 align-top">v4.5</span></h2>
+                    
+                    <div class="flex gap-2 w-full max-w-sm mt-2 mb-2 bg-white/5 p-1.5 rounded-xl border border-white/10">
+                        <button @click="imageFormat = 'vertical'; previewImage = null; updatePreview()" :class="imageFormat === 'vertical' ? 'bg-gold-500 text-black shadow-lg' : 'text-white/60 hover:text-white'" class="flex-1 py-3 rounded-lg font-black uppercase text-[11px] tracking-widest transition-all">Historia (Celular)</button>
+                        <button @click="imageFormat = 'horizontal'; previewImage = null; updatePreview()" :class="imageFormat === 'horizontal' ? 'bg-gold-500 text-black shadow-lg' : 'text-white/60 hover:text-white'" class="flex-1 py-3 rounded-lg font-black uppercase text-[11px] tracking-widest transition-all">Post (PC)</button>
+                    </div>
+
+                    <p class="text-white/40 text-sm font-medium leading-relaxed max-w-sm">Crea al instante una imagen de alta conversión para historias de Instagram, Facebook o WhatsApp.</p>
                 </div>
 
-                <div class="space-y-4">
+                <div class="space-y-4 w-full max-w-sm">
                     <button @click="downloadImage()" :disabled="!previewImage || isExporting" class="w-full py-4 bg-white/5 border border-white/10 hover:border-white/40 text-white hover:text-white rounded-xl font-black uppercase tracking-wide flex items-center justify-center gap-3 transition-all disabled:opacity-50 shadow-lg">
                         <i data-lucide="download" class="w-5 h-5"></i>
                         <span x-text="isExporting ? 'Procesando...' : 'Descargar Imagen HD'"></span>
                     </button>
                     <button @click="copyImage()" :disabled="!previewImage || isExporting" class="w-full py-4 bg-gold-500 text-black hover:bg-gold-400 rounded-xl font-black uppercase tracking-wide flex items-center justify-center gap-3 transition-all shadow-[0_10px_30px_rgba(251,191,36,0.2)] disabled:opacity-50">
                         <i data-lucide="copy" class="w-5 h-5"></i>
-                        <span>Copiar para WhatsApp</span>
+                        <span>Copiar Imagen</span>
                     </button>
                 </div>
             </div>
@@ -496,37 +502,141 @@
 
     <!-- Hidden Template for html2canvas -->
     <div class="fixed top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none z-[-1]">
-        <div id="story-template" class="w-[1080px] h-[1920px] bg-[#050505] flex flex-col justify-between p-24 border-[12px] border-gold-500/20 relative font-sans">
-            <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(251,191,36,0.15)_0%,_#050505_70%)]"></div>
+        <div id="story-template" class="w-[1500px] min-h-[1920px] h-max bg-[#050505] flex flex-col p-20 border-[16px] border-gold-500/20 relative font-sans box-border gap-10">
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(251,191,36,0.15)_0%,_#050505_60%)] z-0 pointer-events-none"></div>
             
-            <!-- Top -->
-            <div class="relative z-10 flex justify-between items-start">
-                <div>
-                    <span class="text-gold-500 text-4xl font-black uppercase tracking-[0.4em] drop-shadow-lg">SNEAKER ELITE</span>
-                </div>
-                <div class="text-white/30 text-3xl font-black tracking-widest uppercase">
-                    MARU PULGAS
-                </div>
+            <!-- Branding Header -->
+            <div class="relative z-10 flex justify-between items-center shrink-0 mb-4">
+                <span class="text-gold-500 text-4xl font-black uppercase tracking-[0.4em]">MARU PULGAS</span>
+                <span class="text-white/30 text-3xl font-black tracking-widest uppercase">SNEAKER ELITE</span>
             </div>
 
-            <!-- Center -->
-            <div class="relative z-10 flex-1 flex flex-col items-center justify-center -mt-20">
-                <span class="text-white/10 text-[140px] font-black uppercase tracking-widest leading-none" x-text="shareProduct?.brand"></span>
-                <img :src="shareProduct?.mainImage" class="w-[900px] h-[900px] object-contain drop-shadow-[0_60px_80px_rgba(0,0,0,0.9)] -mt-20 mb-8" crossorigin="anonymous">
-                <h2 class="text-white text-7xl font-black uppercase text-center leading-tight px-12 drop-shadow-2xl" x-text="shareProduct?.name"></h2>
+            <!-- 1. Main Image (White Container, Taller/Wider) -->
+            <div class="relative z-10 w-full h-[950px] bg-white rounded-[3rem] flex items-center justify-center p-4 shadow-[0_40px_100px_rgba(0,0,0,0.6)] shrink-0 overflow-hidden border border-white/10">
+                <img :src="shareProduct?.mainImage" class="w-auto h-auto max-w-[90%] max-h-[90%] object-contain scale-110" crossorigin="anonymous">
+                <template x-if="shareProduct?.outOfStock">
+                    <div class="absolute top-16 right-16 bg-red-600 text-white text-[60px] font-black px-14 py-6 rounded-full uppercase tracking-widest rotate-[15deg] shadow-2xl border-4 border-white">
+                        AGOTADO
+                    </div>
+                </template>
             </div>
 
-            <!-- Bottom -->
-            <div class="relative z-10 bg-white/5 border-2 border-white/10 rounded-[3rem] p-16 text-center backdrop-blur-xl shadow-2xl">
-                <p class="text-gold-500 text-3xl font-black tracking-[0.3em] uppercase mb-8">PRECIO EXCLUSIVO</p>
-                <div class="flex items-center justify-center gap-10">
-                    <span class="text-white text-[120px] font-black leading-none" x-text="'S/ ' + (shareProduct?.offerPrice || shareProduct?.originalPrice)"></span>
-                    <template x-if="shareProduct?.offerPrice && shareProduct?.offerPrice < shareProduct?.originalPrice">
-                        <span class="text-white/30 text-7xl line-through font-bold mt-4" x-text="'S/ ' + shareProduct?.originalPrice"></span>
-                    </template>
+            <!-- Content Area -->
+            <div class="relative z-10 flex-1 flex flex-col px-6">
+                <!-- 2. Brand -->
+                <span class="text-gold-500 text-[42px] font-black uppercase tracking-[0.4em] block mb-6 shrink-0" x-text="shareProduct?.brand"></span>
+                
+                <!-- 3. Name -->
+                <h2 class="text-white text-[100px] font-black uppercase leading-[1.1] tracking-tight mb-12 shrink-0 break-words" x-text="shareProduct?.name"></h2>
+
+                <!-- 5. Sizes -->
+                <template x-if="shareProduct?.sizes">
+                    <div class="mb-12 shrink-0">
+                        <h4 class="text-white/60 text-[32px] font-bold uppercase tracking-[0.2em] mb-8">
+                            TALLAS DISPONIBLES
+                        </h4>
+                        <div class="flex flex-wrap gap-5">
+                            <template x-for="sz in (shareProduct?.sizes ? shareProduct.sizes.split(',').map(s=>s.trim()).filter(s=>s!=='') : [])" :key="sz">
+                                <div class="relative w-36 h-[5.5rem] bg-[#151515] border border-white/20 rounded-[1.2rem]">
+                                    <div class="absolute inset-0 flex items-center justify-center text-white text-[44px] font-bold">
+                                        <span x-text="sz" class="leading-none pb-1"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 6. Description -->
+                <template x-if="shareProduct?.description">
+                    <div class="mb-12 shrink-0">
+                        <h4 class="text-white/60 text-[32px] font-bold uppercase tracking-[0.2em] mb-8">
+                            RESEÑA
+                        </h4>
+                        <p class="text-white/80 text-[40px] leading-[1.6] font-medium" x-text="shareProduct?.description"></p>
+                    </div>
+                </template>
+
+                <!-- 7. Price Box -->
+                <div class="bg-[#0c0c0c] border border-white/5 rounded-[3rem] p-12 flex justify-between items-center mt-auto shadow-2xl relative overflow-hidden shrink-0">
+                    <div class="flex flex-col border-l-[8px] border-gold-500 pl-10 relative z-10 justify-center">
+                        <p class="text-gold-400 text-[32px] font-black tracking-[0.3em] uppercase mb-3 drop-shadow-md">PRECIO EXCLUSIVO</p>
+                        <div class="flex items-center gap-12">
+                            <span class="text-white text-[130px] font-black leading-none" x-text="'S/ ' + (shareProduct?.offerPrice || shareProduct?.originalPrice)"></span>
+                            <template x-if="shareProduct?.offerPrice && shareProduct?.offerPrice < shareProduct?.originalPrice">
+                                <div class="relative inline-block">
+                                    <span class="text-white/40 text-[70px] font-bold leading-none" x-text="'S/ ' + shareProduct?.originalPrice"></span>
+                                    <svg class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none"><line x1="-5%" y1="80%" x2="105%" y2="80%" stroke="rgba(255,255,255,0.4)" stroke-width="6"/></svg>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center justify-center gap-5 relative z-10">
+                        <div class="w-24 h-24 bg-[#151515] rounded-full flex items-center justify-center border border-white/10">
+                            <svg class="w-12 h-12 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        </div>
+                        <span class="text-[22px] font-black uppercase tracking-widest text-white/50 text-center leading-tight">STOCK<br>LIMITADO</span>
+                    </div>
                 </div>
-                <div class="mt-12 pt-12 border-t-2 border-white/5 flex justify-center gap-8 text-white/50 text-3xl font-bold uppercase tracking-widest">
-                    <span>ENVÍOS A TODO EL PERÚ</span> <span class="text-gold-500/50">•</span> <span>STOCK LIMITADO</span>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- Horizontal Template -->
+    <div class="fixed top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none z-[-1]">
+        <div id="story-template-horizontal" class="w-[1920px] min-h-[1080px] h-max bg-[#0c0c0c] flex p-20 box-border gap-20 font-sans relative">
+            <div class="w-[900px] h-auto shrink-0 bg-white rounded-3xl flex items-center justify-center p-8 relative overflow-hidden shadow-2xl border border-white/10">
+                <img :src="shareProduct?.mainImage" class="w-auto h-auto max-w-[90%] max-h-[90%] object-contain scale-110" crossorigin="anonymous">
+                <template x-if="shareProduct?.outOfStock">
+                    <div class="absolute top-12 right-12 bg-red-600 text-white text-[40px] font-black px-10 py-4 rounded-full uppercase tracking-widest rotate-[15deg] shadow-xl border-4 border-white">
+                        AGOTADO
+                    </div>
+                </template>
+            </div>
+            
+            <div class="flex-1 flex flex-col justify-center">
+                <span class="text-gold-500 text-[28px] font-black uppercase tracking-[0.2em] mb-4" x-text="shareProduct?.brand || 'ADIDAS'"></span>
+                <h2 class="text-white text-[90px] font-black uppercase leading-[1.1] tracking-tight mb-10 break-words" x-text="shareProduct?.name"></h2>
+                
+                <template x-if="shareProduct?.sizes">
+                    <div class="mb-10">
+                        <h4 class="text-white font-bold text-[28px] uppercase tracking-[0.1em] mb-6 flex items-center gap-4">
+                            <span class="w-4 h-4 rounded-full bg-gold-500"></span> TALLAS DISPONIBLES
+                        </h4>
+                        <div class="flex flex-wrap gap-4">
+                            <template x-for="sz in (shareProduct?.sizes ? shareProduct.sizes.split(',').map(s=>s.trim()).filter(s=>s!=='') : [])" :key="sz">
+                                <div class="relative w-36 h-20 bg-[#1a1a1a] border border-white/10 rounded-2xl">
+                                    <div class="absolute inset-0 flex items-center justify-center text-white text-[40px] font-bold">
+                                        <span x-text="sz" class="leading-none pb-1"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+                
+                <template x-if="shareProduct?.description">
+                    <div class="mb-10">
+                        <h4 class="text-white font-bold text-[28px] uppercase tracking-[0.1em] mb-6 flex items-center gap-4">
+                            <span class="w-4 h-4 rounded-full bg-gold-500"></span> RESEÑA DEL CALZADO
+                        </h4>
+                        <p class="text-white/70 text-[35px] leading-[1.5] font-medium" x-text="shareProduct?.description"></p>
+                    </div>
+                </template>
+                
+                <div class="mt-auto flex flex-col gap-10">
+                    <div class="flex items-end gap-8">
+                        <span class="text-white text-[120px] font-black leading-none" x-text="'S/ ' + (shareProduct?.offerPrice || shareProduct?.originalPrice)"></span>
+                        <template x-if="shareProduct?.offerPrice && shareProduct?.offerPrice < shareProduct?.originalPrice">
+                            <div class="relative inline-block">
+                                <span class="text-white/40 text-[65px] font-bold leading-none" x-text="'S/ ' + shareProduct?.originalPrice"></span>
+                                <svg class="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none"><line x1="-5%" y1="80%" x2="105%" y2="80%" stroke="rgba(255,255,255,0.4)" stroke-width="5"/></svg>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    
                 </div>
             </div>
         </div>
@@ -597,7 +707,7 @@
                 products: [], search: '', brandFilter: 'ALL', scrolled: false, isAdmin: false, showLogin: false, showAdmin: false, showDetails: false, isEditing: false, isZoomed: false, activeProduct: {images:[]}, activeIdx: 0, zoomPos: 'center', toast: { show: false, message: '' },
                 form: { id: null, name: '', brand: '', originalPrice: '', offerPrice: '', description: '', images: [], mainImage: '', sizes: '', outOfStock: false },
                 loginU: '', loginP: '', currentSizes: [], selectedSize: '', isLoading: false,
-                showShareModal: false, shareProduct: null, previewImage: null, isExporting: false,
+                showShareModal: false, shareProduct: null, imageFormat: 'vertical', previewImage: null, isExporting: false,
                 allBrands() {
                     return ['ALL', ...new Set(this.products.map(p => (p.brand || 'Otras').toUpperCase()))];
                 },
@@ -617,12 +727,17 @@
                 async openShareGenerator(p) {
                     this.shareProduct = p;
                     this.previewImage = null;
+                    this.imageFormat = 'vertical';
                     this.showShareModal = true;
                     this.$nextTick(() => lucide.createIcons());
-                    
+                    this.updatePreview();
+                },
+                updatePreview() {
+                    this.previewImage = null;
                     setTimeout(async () => {
                         try {
-                            const canvas = await html2canvas(document.getElementById('story-template'), {
+                            const targetId = this.imageFormat === 'horizontal' ? 'story-template-horizontal' : 'story-template';
+                            const canvas = await html2canvas(document.getElementById(targetId), {
                                 scale: 0.3, 
                                 backgroundColor: '#050505',
                                 logging: false
@@ -637,8 +752,8 @@
                 async generateFullImage() {
                     this.isExporting = true;
                     try {
-                        const canvas = await html2canvas(document.getElementById('story-template'), {
-                            scale: 1.5, 
+                        const canvas = await html2canvas(document.getElementById(this.imageFormat === 'horizontal' ? 'story-template-horizontal' : 'story-template'), {
+                            scale: 3, 
                             backgroundColor: '#050505',
                             logging: false
                         });
@@ -665,8 +780,8 @@
                 async copyImage() {
                     this.isExporting = true;
                     try {
-                        const canvas = await html2canvas(document.getElementById('story-template'), {
-                            scale: 1,
+                        const canvas = await html2canvas(document.getElementById(this.imageFormat === 'horizontal' ? 'story-template-horizontal' : 'story-template'), {
+                            scale: 2,
                             backgroundColor: '#050505',
                             logging: false
                         });
