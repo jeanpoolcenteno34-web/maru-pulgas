@@ -449,7 +449,12 @@
     </section>
 
     <footer class="py-8 bg-premium-black border-t border-white/5 text-center relative">
-<button x-show="isAdmin" @click="openNew()" class="fixed bottom-14 right-14 z-[300] w-16 h-16 bg-gold-500 text-black rounded-full shadow-[0_30px_70px_rgba(245,158,11,0.4)] flex items-center justify-center active:scale-90 transition-all hover:bg-gold-400 hover:-translate-y-6"><i data-lucide="plus" class="w-8 h-8 text-black"></i></button>
+        <p class="text-white/20 text-[12px] font-black uppercase tracking-[1em]">Maru Pulgas &copy; 2026 • Exclusive Sneaker Store • Lima</p>
+        <div class="absolute bottom-4 right-8 text-[10px] font-black text-white/10 uppercase tracking-widest">v4</div>
+    </footer>
+
+    <!-- FAB Admin -->
+    <button x-show="isAdmin" @click="openNew()" class="fixed bottom-14 right-14 z-[300] w-16 h-16 bg-gold-500 text-black rounded-full shadow-[0_30px_70px_rgba(245,158,11,0.4)] flex items-center justify-center active:scale-90 transition-all hover:bg-gold-400 hover:-translate-y-6"><i data-lucide="plus" class="w-8 h-8 text-black"></i></button>
 
     <script>
         // --- AISLAMIENTO TOTAL DE FIREBASE (window.MARU_CLOUD) ---
@@ -483,11 +488,28 @@
             },
             async save(items) {
                 if (!this.db) return;
-                const cloudData = {
-                    items: JSON.parse(JSON.stringify(items)), // Clonación profunda para limpiar proxies
-                    _ts: Date.now()
-                };
-                await this.db.ref('maru_store/products').set(cloudData);
+                const cloudData = JSON.parse(JSON.stringify(items));
+                
+                try {
+                    // Firebase tiene un límite de tamaño por mensaje. Como las imágenes en base64 son pesadas,
+                    // guardamos los productos uno por uno para que nunca falle por "Write too large".
+                    const promises = cloudData.map((item, index) => 
+                        this.db.ref(`maru_store/products/items/${index}`).set(item)
+                    );
+                    await Promise.all(promises);
+
+                    // Limpieza: Si eliminaste un producto, borramos el "fantasma" que queda al final en Firebase
+                    const snap = await this.db.ref('maru_store/products/items').once('value');
+                    const cloudCount = snap.val() ? snap.val().length : 0;
+                    for (let i = cloudData.length; i < cloudCount; i++) {
+                        await this.db.ref(`maru_store/products/items/${i}`).remove();
+                    }
+
+                    // Actualizar la marca de tiempo notifica a los demás celulares al instante
+                    await this.db.ref('maru_store/products/_ts').set(Date.now());
+                } catch (error) {
+                    console.error("Error guardando en la nube:", error);
+                }
             }
         };
 
